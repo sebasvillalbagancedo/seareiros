@@ -1,0 +1,51 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: sans-serif;
+  background: #f0f2f5;
+  color: #333;
+}
+
+/* ── Formularios ─────────────────────────── */
+label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 6px;
+}
+
+input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+
+input:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+/* ── Mensajes ────────────────────────────── */
+.error {
+  color: #e74c3c;
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.exito {
+  color: #27ae60;
+  background: #eafaf1;
+  border: 1px solid #a9dfbf;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-top: 16px;
+}
