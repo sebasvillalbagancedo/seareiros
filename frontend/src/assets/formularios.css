@@ -1,0 +1,11 @@
+.fila-campos {
+  display: flex;
+  gap: 12px;
+}
+
+.fila-campos .campo { flex: 1; }
+
+.campo-cp {
+  max-width: 110px;
+  flex: none !important;
+}

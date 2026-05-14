@@ -107,25 +107,8 @@ h1 {
   margin-bottom: 16px;
 }
 
-button {
+.btn-login {
   width: 100%;
-  padding: 11px;
-  background: #2c3e50;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
   margin-top: 8px;
-  transition: background 0.2s;
-}
-
-button:hover:not(:disabled) {
-  background: #3d5166;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 </style>

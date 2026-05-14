@@ -1,0 +1,41 @@
+.btn-primario {
+  background: #2c3e50;
+  color: white;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primario:hover:not(:disabled) { background: #3d5166; }
+.btn-primario:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-secundario {
+  background: white;
+  color: #555;
+  border: 1px solid #ccc;
+  padding: 9px 20px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secundario:hover { background: #f5f5f5; }
+
+.btn-accion {
+  background: #f0f0f0;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  margin-right: 6px;
+  transition: background 0.2s;
+}
+
+.btn-accion:hover { background: #e0e0e0; }
+.btn-accion.btn-baja { background: #fde8e8; color: #c0392b; }
+.btn-accion.btn-baja:hover { background: #f5c6c2; }

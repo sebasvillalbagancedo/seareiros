@@ -1,0 +1,15 @@
+.error {
+  color: #e74c3c;
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.exito {
+  color: #27ae60;
+  background: #eafaf1;
+  border: 1px solid #a9dfbf;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-top: 16px;
+}

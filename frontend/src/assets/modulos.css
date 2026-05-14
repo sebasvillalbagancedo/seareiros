@@ -1,0 +1,15 @@
+.modulo-view {
+  padding: 32px;
+}
+
+.modulo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.modulo-header h2 {
+  font-size: 1.4rem;
+  color: #2c3e50;
+}

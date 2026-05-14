@@ -16,3 +16,11 @@ class UsuarioOutput(BaseModel):
     apellidos: str
     rol: str
     estado: str
+
+class UsuarioListOutput(BaseModel):
+    id:             str
+    codigo_usuario: str
+    nombre:         str
+    apellidos:      str
+    rol:            str
+    estado:         str    

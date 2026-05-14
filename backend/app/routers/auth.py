@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlmodel import Session
+from sqlmodel import Session, select
 from datetime import datetime
 from app.database import get_session
-from app.schemas.usuario import LoginInput, TokenOutput, UsuarioOutput
+from app.schemas.usuario import LoginInput, TokenOutput, UsuarioOutput, UsuarioListOutput
 from app.services.auth import autenticar_usuario, create_token, decode_token
 from app.models.usuario import Usuario
 
@@ -12,7 +12,9 @@ router = APIRouter(prefix='/auth', tags=['Autenticación'])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/auth/login')
 
 @router.post('/login', response_model=TokenOutput)
-def login(datos: LoginInput, session: Session = Depends(get_session)):
+def login(
+    datos: LoginInput, 
+    session: Session = Depends(get_session)): 
     usuario = autenticar_usuario(datos.identificador, datos.contrasena, session)
     
     if not usuario:
@@ -32,11 +34,14 @@ def login(datos: LoginInput, session: Session = Depends(get_session)):
 
 @router.post('/logout', status_code=status.HTTP_204_NO_CONTENT)
 def logout():
-    # Con JWT el logout es responsabilidad del cliente: simplemente descarta el  toke. Este endpoint existe para que el frontend tenga un punto de cierre explícito
+    # Con JWT el logout es responsabilidad del cliente: simplemente descarta el  token. 
+    # Este endpoint existe para que el frontend tenga un punto de cierre explícito
     return
 
 @router.get('/me', response_model=UsuarioOutput)
-def me(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)):
+def me(
+    token: str = Depends(oauth2_scheme), 
+    session: Session = Depends(get_session)):
     # Devuelve los datos del usuario autenticado a partir del token
     try:
         payload = decode_token(token)
@@ -58,3 +63,30 @@ def me(token: str = Depends(oauth2_scheme), session: Session = Depends(get_sessi
         rol=usuario.rol,
         estado=usuario.estado
     )
+
+@router.get('/usuarios', response_model=list[UsuarioListOutput])
+def listar_usuarios(
+    token: str = Depends(oauth2_scheme),
+    session: Session = Depends(get_session)
+):
+    # Devuelve la lista de usuarios (sin contraseña) solo si el token corresponde a un administrador
+    try:
+        payload = decode_token(token)
+        user_id = payload.get('sub')
+        rol     = payload.get('rol')
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail='Token inválido o expirado')
+    if rol != 'administrador':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail='Solo el administrador puede consultar los usuarios')
+    usuarios = session.exec(select(Usuario)).all()
+    return [
+        UsuarioListOutput(
+            id=str(u.id), codigo_usuario=u.codigo_usuario,
+            nombre=u.nombre, apellidos=u.apellidos,
+            rol=u.rol, estado=u.estado
+        )
+        for u in usuarios
+        if u.id != user_id  # excluye al propio administrador
+    ]

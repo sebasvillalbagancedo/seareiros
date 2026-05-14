@@ -1,0 +1,105 @@
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #2c3e50;
+  color: white;
+  padding: 0 24px;
+  height: 56px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.topbar-titulo {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.topbar-usuario {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.9rem;
+}
+
+.topbar-rol {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+}
+
+.topbar-usuario button {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: white;
+  padding: 5px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.topbar-usuario button:hover { background: rgba(255, 255, 255, 0.1); }
+
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 200px;
+  background: #f8f9fa;
+  border-right: 1px solid #e0e0e0;
+  flex-shrink: 0;
+  padding: 16px 0;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #555;
+  border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebar li:hover { background: #eef0f2; color: #2c3e50; }
+
+.sidebar li.activo {
+  background: #e8ecf0;
+  color: #2c3e50;
+  font-weight: 600;
+  border-left-color: #2c3e50;
+}
+
+.sidebar-icono { font-size: 1.1rem; }
+
+.app-contenido {
+  flex: 1;
+  overflow-y: auto;
+  background: #f0f2f5;
+}
+
+.app-placeholder {
+  padding: 40px;
+  color: #888;
+}
