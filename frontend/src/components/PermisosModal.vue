@@ -75,8 +75,8 @@
 </template>
 
 <script>
-import api from '@/services/api'
 import { useSociosStore } from '@/stores/socios'
+import { useUsuariosStore } from '@/stores/usuarios'
 
 export default {
   name: 'PermisosModal',
@@ -100,7 +100,7 @@ export default {
 
   computed: {
     usuariosNormales() {
-      return this.usuarios.filter(u => u.rol === 'normal')
+      return useUsuariosStore().usuarios.filter(u => u.rol === 'normal')
     },
   },
 
@@ -113,8 +113,7 @@ export default {
       this.cargando = true
       this.error    = null
       try {
-        const { data } = await api.get('/auth/usuarios')
-        this.usuarios = data
+        await useUsuariosStore().cargarUsuarios()  
         await this.cargarPermisos()
       } catch {
         this.error = 'No se pudo cargar la lista de usuarios.'
@@ -124,10 +123,8 @@ export default {
     },
 
     async cargarPermisos() {
-      // Obtenemos los permisos vigentes consultando los socios asignados
-      // a cada usuario, comparando con el socio actual
-      const { data } = await api.get(`/socios/${this.socio.id}/permisos`)
-      this.permisos = data.map(p => p.usuario_id)
+      await useSociosStore().cargarPermisos(this.socio.id)
+      this.permisos = useSociosStore().permisos.map(p => p.usuario_id)
     },
 
     tienePermiso(usuarioId) {

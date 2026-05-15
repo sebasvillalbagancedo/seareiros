@@ -4,6 +4,7 @@ import api from '@/services/api'
 
 export const useSociosStore = defineStore('socios', () => {
   const socios   = ref([])
+  const permisos = ref([]) 
   const cargando = ref(false)
   const error    = ref(null)
 
@@ -34,19 +35,24 @@ export const useSociosStore = defineStore('socios', () => {
   }
 
   async function darBaja(id) {
-    const { data } = await api.patch(`/socios/${id}/baja`)
+    const { data } = await api.patch(`/socios/${id}`)
     const idx = socios.value.findIndex(s => s.id === id)
     if (idx !== -1) socios.value[idx] = data
     return data
   }
 
+  async function cargarPermisos(socioId) {
+    const { data } = await api.get(`/socios/${socioId}/permisos`)
+    permisos.value = data
+  }
+
   async function asignarPermiso(socioId, usuarioId) {
-    await api.post(`/socios/${socioId}/asignar/${usuarioId}`)
+    await api.post(`/socios/${socioId}/permisos/${usuarioId}`)
   }
 
   async function revocarPermiso(socioId, usuarioId) {
-    await api.patch(`/socios/${socioId}/revocar/${usuarioId}`)
+    await api.patch(`/socios/${socioId}/permisos/${usuarioId}`)
   }
 
-  return { socios, cargando, error, cargar, crear, editar, darBaja, asignarPermiso, revocarPermiso }
+  return { socios, permisos, cargando, error, cargar, crear, editar, darBaja, cargarPermisos, asignarPermiso, revocarPermiso }
 })

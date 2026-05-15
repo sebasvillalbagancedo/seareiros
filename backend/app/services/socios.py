@@ -9,7 +9,7 @@ def get_socios_usuario(usuario: Usuario, session: Session) -> list[Socio]:
     Devuelve la lista de socios a los que el usuario tiene acceso.
     """
     if usuario.rol == "administrador":
-        return session.exec(select(Socio)).all()
+        return session.exec(select(Socio).order_by(asc(Socio.numero_socio))).all()
 
     statement = (
         select(Socio)

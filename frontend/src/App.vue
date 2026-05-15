@@ -6,6 +6,7 @@
 
 <script>
 import { useAuthStore } from '@/stores/auth'
+import { useUsuariosStore } from '@/stores/usuarios'
 import LoginView from '@/views/LoginView.vue'
 import MainView  from '@/views/MainView.vue'
 
@@ -22,9 +23,10 @@ export default {
 
   async created() {
     const auth = useAuthStore()
+    const usuario = useUsuariosStore()
     if (auth.estaAutenticado()) {
       try {
-        await auth.cargarUsuario()
+        await usuario.cargarUsuario()
         this.autenticado = true
       } catch {
         auth.logout()

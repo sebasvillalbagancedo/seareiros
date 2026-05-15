@@ -103,7 +103,7 @@
 
 <script>
 import { useSociosStore } from '@/stores/socios'
-import { useAuthStore }   from '@/stores/auth'
+import { useUsuariosStore } from '@/stores/usuarios'
 import SocioFormModal     from '@/components/SocioFormModal.vue'
 import PermisosModal      from '@/components/PermisosModal.vue'
 export default {
@@ -118,13 +118,13 @@ export default {
       mensajeExito:      null,
       permisosModalVisible: false,
       textoBusqueda:        '',
-      filtroEstado:         '',
+      filtroEstado:         'activo',
     }
   },
 
   computed: {
     store()   { return useSociosStore() },
-    esAdmin() { return useAuthStore().usuario?.rol === 'administrador' },
+    esAdmin() { return useUsuariosStore().usuario?.rol === 'administrador' },
     sociosFiltrados() {
       return this.store.socios.filter(s => {
         const texto = this.textoBusqueda.toLowerCase()
@@ -201,27 +201,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-.fila-baja td { color: #aaa; }
-
-.barra-filtros {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.input-busqueda {
-  flex: 1;
-  max-width: 360px;
-}
-
-.select-filtro {
-  padding: 10px 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  background: white;
-  cursor: pointer;
-}
-</style>

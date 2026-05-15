@@ -17,7 +17,7 @@
             v-for="item in menu"
             :key="item.id"
             :class="{ activo: moduloActivo === item.id }"
-            @click="moduloActivo = item.id"
+            @click="cambiarModulo(item.id)"
           >
             <component :is="item.icono" :size="18" class="sidebar-icono" />
             <span>{{ item.etiqueta }}</span>
@@ -27,6 +27,7 @@
         
       <main class="app-contenido">
         <SociosView v-if="moduloActivo === 'socios'" />
+        <SorteosView v-else-if="moduloActivo === 'sorteos'" />
           <div v-else class="app-placeholder">
             <p>Módulo en desarrollo.</p>
           </div>
@@ -37,21 +38,23 @@
 
 <script>
 import { useAuthStore } from '@/stores/auth'
+import { useUsuariosStore } from '@/stores/usuarios'
 import SociosView from '@/views/SociosView.vue'
+import SorteosView from '@/views/SorteosView.vue'
 import { Users, Dices, CalendarDays, MessageCircle } from 'lucide-vue-next'
 
 export default {
   name: 'MainView',
-  components: { SociosView, Users, Dices, CalendarDays, MessageCircle },
+  components: { SociosView, SorteosView, Users, Dices, CalendarDays, MessageCircle },
   emits: ['logout'],
 
   data() {
     return {
-      moduloActivo: 'socios',
+      moduloActivo: localStorage.getItem('moduloActivo') || 'socios',
       menu: [
-        { id: 'socios',  icono: Users, etiqueta: 'Socios' },
-        { id: 'sorteos', icono: Dices, etiqueta: 'Sorteos' },
-        { id: 'eventos', icono: CalendarDays, etiqueta: 'Eventos' },
+        { id: 'socios',  icono: Users,         etiqueta: 'Socios' },
+        { id: 'sorteos', icono: Dices,         etiqueta: 'Sorteos' },
+        { id: 'eventos', icono: CalendarDays,  etiqueta: 'Eventos' },
         { id: 'chat',    icono: MessageCircle, etiqueta: 'Chat'    },
       ],
     }
@@ -59,12 +62,17 @@ export default {
 
   computed: {
     usuario() {
-      return useAuthStore().usuario
+      return useUsuariosStore().usuario
     }
   },
 
   methods: {
+    cambiarModulo(id) {
+      this.moduloActivo = id
+      localStorage.setItem('moduloActivo', id)
+    },
     handleLogout() {
+      localStorage.removeItem('moduloActivo')
       useAuthStore().logout()
       this.$emit('logout')
     }

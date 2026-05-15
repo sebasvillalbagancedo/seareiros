@@ -1,11 +1,26 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, socios
+from app.routers import auth, socios, sorteos, usuarios
+from app.scheduler import iniciar_scheduler, scheduler
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Gestiona el ciclo de vida de la aplicación.
+    Al arrancar: inicia el planificador de sorteos.
+    Al apagar: detiene el planificador limpiamente.
+    """
+    iniciar_scheduler()
+    yield
+    if scheduler.running:
+        scheduler.shutdown()
 
 app = FastAPI(
     title='Seareiros API',
     version='1.0.0',
-    description='Plataforma de gestión para peñas deportivas'
+    description='Plataforma de gestión para peñas deportivas',
+    lifespan=lifespan
 )
 
 app.add_middleware(
@@ -17,3 +32,5 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(socios.router)
+app.include_router(sorteos.router)
+app.include_router(usuarios.router)
