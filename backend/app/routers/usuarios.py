@@ -8,9 +8,10 @@ from app.models.usuario import Usuario
 
 router = APIRouter(prefix='/usuarios', tags=['Usuarios'])
 
-
-@router.get('/me', response_model=UsuarioOutput, summary='Obtener Usuario Autenticado')
-def get_usuario_me(
+@router.get('/me', 
+            response_model=UsuarioOutput, 
+            summary='Obtener Usuario Autenticado')
+def get_usuario_me_ep(
     token: str = Depends(oauth2_scheme),
     session: Session = Depends(get_session)
 ):
@@ -38,30 +39,23 @@ def get_usuario_me(
         estado=usuario.estado
     )
 
-
-@router.get('', response_model=list[UsuarioListOutput], summary='Listar Usuarios')
-def get_usuarios(
+@router.get('', 
+            response_model=list[UsuarioListOutput], 
+            summary='Listar Usuarios')
+def get_usuarios_ep(
     token: str = Depends(oauth2_scheme),
     session: Session = Depends(get_session)
 ):
     """
     Devuelve la lista de usuarios.
-    Solo accesible para el administrador.
     """
     try:
         payload = decode_token(token)
         user_id = payload.get('sub')
-        rol     = payload.get('rol')
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Token inválido o expirado'
-        )
-
-    if rol != 'administrador':
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Solo el administrador puede consultar los usuarios'
         )
 
     usuarios = session.exec(select(Usuario)).all()
@@ -75,5 +69,5 @@ def get_usuarios(
             estado=u.estado
         )
         for u in usuarios
-        if u.id != user_id  # excluye al propio administrador
+        if u.id != user_id  # excluye al propio usuario
     ]

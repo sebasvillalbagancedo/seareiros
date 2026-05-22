@@ -2,6 +2,9 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
 import { useUsuariosStore } from '@/stores/usuarios'
+import { useSociosStore } from '@/stores/socios'
+import { useSorteosStore } from '@/stores/sorteos'
+import { useChatStore } from '@/stores/chat'
 
 export const useAuthStore = defineStore('auth', () => {
   const token   = ref(localStorage.getItem('token') || null)
@@ -22,6 +25,9 @@ export const useAuthStore = defineStore('auth', () => {
     token.value   = null
     localStorage.removeItem('token')
     useUsuariosStore().limpiar()
+    useSociosStore().limpiar()
+    useSorteosStore().limpiar()
+    useChatStore().limpiar()
   }
 
   return { token, estaAutenticado, login, logout }

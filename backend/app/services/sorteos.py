@@ -9,7 +9,7 @@ import uuid
 import random
 
 
-# ── Helpers de validación de requisitos ──────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────
 
 def validar_requisitos_socio(socio: Socio, sorteo: Sorteo) -> tuple[bool, str]:
     """
@@ -46,7 +46,6 @@ def validar_requisitos_socio(socio: Socio, sorteo: Sorteo) -> tuple[bool, str]:
 
     return True, ""
 
-
 # ── Sorteos ───────────────────────────────────────────────────────
 
 def contar_inscritos(sorteo_id: uuid.UUID, session: Session) -> int:
@@ -58,18 +57,15 @@ def contar_inscritos(sorteo_id: uuid.UUID, session: Session) -> int:
         )
     ).one()
 
-
 def get_sorteos(session: Session) -> list[Sorteo]:
     """Devuelve todos los sorteos ordenados por fecha de celebración."""
     return session.exec(
         select(Sorteo).order_by(Sorteo.fecha_celebracion.asc())
     ).all()
 
-
 def get_sorteo(sorteo_id: str, session: Session) -> Sorteo | None:
     """Devuelve un sorteo por su ID o None si no existe."""
     return session.get(Sorteo, uuid.UUID(sorteo_id))
-
 
 def crear_sorteo(datos: SorteoCreate, usuario: Usuario, session: Session) -> Sorteo:
     """Crea un nuevo sorteo."""
@@ -82,7 +78,6 @@ def crear_sorteo(datos: SorteoCreate, usuario: Usuario, session: Session) -> Sor
     session.refresh(sorteo)
     return sorteo
 
-
 def editar_sorteo(sorteo: Sorteo, datos: SorteoUpdate, session: Session) -> Sorteo:
     """Edita los datos de un sorteo existente. Solo en estado abierto."""
     for campo, valor in datos.model_dump(exclude_unset=True).items():
@@ -92,7 +87,6 @@ def editar_sorteo(sorteo: Sorteo, datos: SorteoUpdate, session: Session) -> Sort
     session.refresh(sorteo)
     return sorteo
 
-
 def cancelar_sorteo(sorteo: Sorteo, motivo: str, session: Session) -> Sorteo:
     """Cancela un sorteo e informa el motivo."""
     sorteo.estado             = "cancelado"
@@ -101,7 +95,6 @@ def cancelar_sorteo(sorteo: Sorteo, motivo: str, session: Session) -> Sorteo:
     session.commit()
     session.refresh(sorteo)
     return sorteo
-
 
 # ── Inscripciones ─────────────────────────────────────────────────
 
@@ -119,7 +112,6 @@ def get_inscripciones(sorteo_id: str, session: Session) -> list[tuple[Inscripcio
         .order_by(Socio.apellidos, Socio.nombre)
     )
     return session.exec(statement).all()
-
 
 def inscribir_socio(
     sorteo: Sorteo,
@@ -179,7 +171,6 @@ def inscribir_socio(
     session.refresh(inscripcion)
     return inscripcion, ""
 
-
 def cancelar_inscripcion(
     inscripcion: InscripcionSorteo,
     usuario: Usuario,
@@ -193,7 +184,6 @@ def cancelar_inscripcion(
     session.commit()
     session.refresh(inscripcion)
     return inscripcion
-
 
 # ── Resolución del sorteo ─────────────────────────────────────────
 

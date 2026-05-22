@@ -1,11 +1,8 @@
 <template>
   <div class="modulo-view">
-
     <div class="modulo-header">
       <h2>Sorteos</h2>
-      <button v-if="esAdmin" class="btn-primario" @click="abrirModalCrear">
-        + Nuevo sorteo
-      </button>
+      <button v-if="esAdmin" class="btn-primario" @click="abrirModalCrear">+ Nuevo sorteo</button>
     </div>
 
     <!-- Filtros -->
@@ -50,7 +47,7 @@
                 / {{ s.maximo_inscritos }}
               </span>
             </td>
-            <td>{{ s.numero_premios }}</td>            
+            <td>{{ s.numero_premios }}</td>
             <td>
               <span class="badge" :class="claseBadge(s.estado)">
                 {{ etiquetaEstado(s.estado) }}
@@ -110,218 +107,172 @@
     />
 
     <!-- Modal cancelar -->
-    <div v-if="cancelarVisible" class="modal-overlay" @click.self="cancelarVisible = false">
-      <div class="modal modal-sm">
-        <div class="modal-header">
-          <h3>Cancelar sorteo</h3>
-          <button class="btn-cerrar" @click="cancelarVisible = false">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="campo">
-            <label>Motivo de cancelación *</label>
-            <input v-model="motivoCancelacion" type="text"
-                   placeholder="Indica el motivo..." required />
-          </div>
-          <p v-if="errorCancelar" class="error">{{ errorCancelar }}</p>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-secundario" @click="cancelarVisible = false">Volver</button>
-          <button class="btn-primario btn-baja-modal"
-                  :disabled="!motivoCancelacion || procesando"
-                  @click="confirmarCancelar">
-            {{ procesando ? 'Cancelando...' : 'Confirmar cancelación' }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <SorteoCancelarModal
+      v-if="cancelarVisible"
+      :sorteo="sorteoSeleccionado"
+      @cerrar="cancelarVisible = false"
+      @cancelado="onCancelado"
+    />
 
     <!-- Modal resolver -->
-    <div v-if="resolverVisible" class="modal-overlay" @click.self="resolverVisible = false">
-      <div class="modal modal-sm">
-        <div class="modal-header">
-          <h3>Resolver sorteo</h3>
-          <button class="btn-cerrar" @click="resolverVisible = false">✕</button>
-        </div>
-        <div class="modal-body">
-          <p>¿Resolver el sorteo <strong>{{ sorteoSeleccionado?.nombre }}</strong> ahora?
-             Se seleccionarán {{ sorteoSeleccionado?.numero_premios }} ganador(es) aleatoriamente
-             entre los {{ sorteoSeleccionado?.inscritos }} inscritos.</p>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-secundario" @click="resolverVisible = false">Volver</button>
-          <button class="btn-primario" :disabled="procesando" @click="confirmarResolver">
-            {{ procesando ? 'Resolviendo...' : 'Confirmar resolución' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
+    <SorteoResolverModal
+      v-if="resolverVisible"
+      :sorteo="sorteoSeleccionado"
+      @cerrar="resolverVisible = false"
+      @resuelto="onResuelto"
+    />
   </div>
 </template>
 
 <script>
-import { useSorteosStore }  from '@/stores/sorteos'
-import { useUsuariosStore } from '@/stores/usuarios'
-import SorteoFormModal      from '@/components/SorteoFormModal.vue'
-import InscripcionesModal   from '@/components/InscripcionesModal.vue'
+  import { useSorteosStore } from '@/stores/sorteos'
+  import { useUsuariosStore } from '@/stores/usuarios'
+  import { formatFecha } from '@/utils/fecha'
+  import SorteoFormModal from '@/components/SorteoFormModal.vue'
+  import InscripcionesModal from '@/components/InscripcionesModal.vue'
+  import SorteoCancelarModal from '@/components/SorteoCancelarModal.vue'
+  import SorteoResolverModal from '@/components/SorteoResolverModal.vue'
 
-export default {
-  name: 'SorteosView',
-  components: { SorteoFormModal, InscripcionesModal },
-
-  data() {
-    return {
-      textoBusqueda:      '',
-      filtroEstado:       'abierto',   // por defecto muestra solo abiertos
-      modalVisible:       false,
-      modalModo:          'crear',
-      sorteoSeleccionado: null,
-      inscripcionesVisible: false,
-      cancelarVisible:    false,
-      resolverVisible:    false,
-      motivoCancelacion:  '',
-      mensajeExito:       null,
-      errorCancelar:      null,
-      procesando:         false,
-    }
-  },
-
-  computed: {
-    store()   { return useSorteosStore() },
-    esAdmin() { return useUsuariosStore().usuario?.rol === 'administrador' },
-
-    sorteosFiltrados() {
-      return this.store.sorteos.filter(s => {
-        const texto = this.textoBusqueda.toLowerCase()
-        const coincideTexto  = !texto || s.nombre.toLowerCase().includes(texto)
-        const coincideEstado = !this.filtroEstado || s.estado === this.filtroEstado
-        return coincideTexto && coincideEstado
-      })
-    },
-  },
-
-  async created() {
-    await useSorteosStore().cargar()
-  },
-
-  methods: {
-    formatFecha(iso) {
-      if (!iso) return '—'
-      return new Date(iso).toLocaleDateString('es-ES', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-      })
+  export default {
+    name: 'SorteosView',
+    components: {
+      SorteoFormModal,
+      InscripcionesModal,
+      SorteoCancelarModal,
+      SorteoResolverModal,
     },
 
-    claseBadge(estado) {
-      const mapa = {
-        abierto:   'badge-activo',
-        pendiente: 'badge-pendiente',
-        resuelto:  'badge-resuelto',
-        cancelado: 'badge-baja',
+    data() {
+      return {
+        textoBusqueda: '',
+        filtroEstado: 'abierto', // por defecto muestra solo abiertos
+        modalVisible: false,
+        modalModo: 'crear',
+        sorteoSeleccionado: null,
+        inscripcionesVisible: false,
+        cancelarVisible: false,
+        resolverVisible: false,
+        mensajeExito: null,
       }
-      return mapa[estado] || ''
     },
 
-    etiquetaEstado(estado) {
-      const mapa = {
-        abierto:   'Abierto',
-        pendiente: 'Pendiente',
-        resuelto:  'Resuelto',
-        cancelado: 'Cancelado',
-      }
-      return mapa[estado] || estado
+    computed: {
+      store() {
+        return useSorteosStore()
+      },
+      esAdmin() {
+        return useUsuariosStore().usuario?.rol === 'administrador'
+      },
+
+      sorteosFiltrados() {
+        return this.store.sorteos.filter((s) => {
+          const texto = this.textoBusqueda.toLowerCase()
+          const coincideTexto = !texto || s.nombre.toLowerCase().includes(texto)
+          const coincideEstado = !this.filtroEstado || s.estado === this.filtroEstado
+          return coincideTexto && coincideEstado
+        })
+      },
     },
 
-    abrirModalCrear() {
-      this.sorteoSeleccionado = null
-      this.modalModo          = 'crear'
-      this.modalVisible       = true
+    async created() {
+      await useSorteosStore().cargar()
     },
 
-    abrirModalEditar(sorteo) {
-      this.sorteoSeleccionado = sorteo
-      this.modalModo          = 'editar'
-      this.modalVisible       = true
-    },
+    methods: {
+      formatFecha,
 
-    cerrarModal() {
-      this.modalVisible       = false
-      this.sorteoSeleccionado = null
-    },
-
-    abrirInscripciones(sorteo) {
-      this.sorteoSeleccionado  = sorteo
-      this.inscripcionesVisible = true
-    },
-
-    abrirModalCancelar(sorteo) {
-      this.sorteoSeleccionado = sorteo
-      this.motivoCancelacion  = ''
-      this.errorCancelar      = null
-      this.cancelarVisible    = true
-    },
-
-    abrirModalResolver(sorteo) {
-      this.sorteoSeleccionado = sorteo
-      this.resolverVisible    = true
-    },
-
-    // Helper para extraer el mensaje de error de la respuesta de FastAPI
-    getMensajeError(e) {
-      const detail = e.response?.data?.detail
-      if (!detail) return 'Error inesperado. Inténtalo de nuevo.'
-      if (typeof detail === 'string') return detail
-      if (Array.isArray(detail)) return detail.map(d => d.msg).join(', ')
-      return 'Error inesperado. Inténtalo de nuevo.'
-    },
-
-    async handleGuardado(datos) {
-      try {
-        if (this.modalModo === 'crear') {
-          await this.store.crear(datos)
-          this.mostrarExito('Sorteo creado correctamente.')
-        } else {
-          await this.store.editar(this.sorteoSeleccionado.id, datos)
-          this.mostrarExito('Sorteo actualizado correctamente.')
+      claseBadge(estado) {
+        const mapa = {
+          abierto: 'badge-activo',
+          pendiente: 'badge-pendiente',
+          resuelto: 'badge-resuelto',
+          cancelado: 'badge-baja',
         }
-        this.cerrarModal()
-      } catch (e) {
-        alert(this.getMensajeError(e))
-      }
-    },
+        return mapa[estado] || ''
+      },
 
-    async confirmarCancelar() {
-      this.procesando  = true
-      this.errorCancelar = null
-      try {
-        await this.store.cancelar(this.sorteoSeleccionado.id, this.motivoCancelacion)
+      etiquetaEstado(estado) {
+        const mapa = {
+          abierto: 'Abierto',
+          pendiente: 'Pendiente',
+          resuelto: 'Resuelto',
+          cancelado: 'Cancelado',
+        }
+        return mapa[estado] || estado
+      },
+
+      abrirModalCrear() {
+        this.sorteoSeleccionado = null
+        this.modalModo = 'crear'
+        this.modalVisible = true
+      },
+
+      abrirModalEditar(sorteo) {
+        this.sorteoSeleccionado = sorteo
+        this.modalModo = 'editar'
+        this.modalVisible = true
+      },
+
+      cerrarModal() {
+        this.modalVisible = false
+        this.sorteoSeleccionado = null
+      },
+
+      abrirInscripciones(sorteo) {
+        this.sorteoSeleccionado = sorteo
+        this.inscripcionesVisible = true
+      },
+
+      abrirModalCancelar(sorteo) {
+        this.sorteoSeleccionado = sorteo
+        this.cancelarVisible = true
+      },
+
+      abrirModalResolver(sorteo) {
+        this.sorteoSeleccionado = sorteo
+        this.resolverVisible = true
+      },
+
+      // Helper para extraer el mensaje de error de la respuesta de FastAPI
+      getMensajeError(e) {
+        const detail = e.response?.data?.detail
+        if (!detail) return 'Error inesperado. Inténtalo de nuevo.'
+        if (typeof detail === 'string') return detail
+        if (Array.isArray(detail)) return detail.map((d) => d.msg).join(', ')
+        return 'Error inesperado. Inténtalo de nuevo.'
+      },
+
+      async handleGuardado(datos) {
+        try {
+          if (this.modalModo === 'crear') {
+            await this.store.crear(datos)
+            this.mostrarExito('Sorteo creado correctamente.')
+          } else {
+            await this.store.editar(this.sorteoSeleccionado.id, datos)
+            this.mostrarExito('Sorteo actualizado correctamente.')
+          }
+          this.cerrarModal()
+        } catch (e) {
+          alert(this.getMensajeError(e))
+        }
+      },
+
+      onCancelado() {
         this.cancelarVisible = false
         this.mostrarExito('Sorteo cancelado correctamente.')
-      } catch (e) {
-        this.errorCancelar = e.response?.data?.detail || 'Error al cancelar el sorteo.'
-      } finally {
-        this.procesando = false
-      }
-    },
+      },
 
-    async confirmarResolver() {
-      this.procesando = true
-      try {
-        await this.store.resolver(this.sorteoSeleccionado.id)
+      onResuelto() {
         this.resolverVisible = false
         this.mostrarExito('Sorteo resuelto correctamente.')
-      } catch (e) {
-        alert(e.response?.data?.detail || 'Error al resolver el sorteo.')
-      } finally {
-        this.procesando = false
-      }
-    },
+      },
 
-    mostrarExito(msg) {
-      this.mensajeExito = msg
-      setTimeout(() => { this.mensajeExito = null }, 3000)
-    }
+      mostrarExito(msg) {
+        this.mensajeExito = msg
+        setTimeout(() => {
+          this.mensajeExito = null
+        }, 3000)
+      },
+    },
   }
-}
 </script>

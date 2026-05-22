@@ -7,9 +7,9 @@ from app.services.auth import autenticar_usuario, create_token
  
 router = APIRouter(prefix='/auth', tags=['Autenticación'])
  
- 
-@router.post('/login', response_model=TokenOutput)
-def login(
+@router.post('/login', 
+             response_model=TokenOutput)
+def login_ep(
     datos: LoginInput,
     session: Session = Depends(get_session)
 ):
@@ -31,9 +31,9 @@ def login(
     token = create_token({'sub': str(usuario.id), 'rol': usuario.rol})
     return TokenOutput(access_token=token)
  
- 
-@router.post('/logout', status_code=status.HTTP_204_NO_CONTENT)
-def logout():
+@router.post('/logout', 
+             status_code=status.HTTP_204_NO_CONTENT)
+def logout_ep():
     """
     Cierre de sesión.
     Con JWT el logout es responsabilidad del cliente: simplemente descarta el token.

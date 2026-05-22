@@ -8,10 +8,7 @@ socio_seq = Sequence('socios_numero_socio_seq')
 
 class Socio(SQLModel, table=True):
     __tablename__ = 'socios'
-    id:                     uuid.UUID           = Field(
-                                                    default_factory=uuid.uuid4, 
-                                                    primary_key=True
-                                                    )
+    id:                     uuid.UUID           = Field(default_factory=uuid.uuid4, primary_key=True)
     numero_socio:           Optional[int]       = Field(
                                                     default=None,
                                                     sa_column=Column(

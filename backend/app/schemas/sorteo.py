@@ -2,6 +2,7 @@ from pydantic import BaseModel, model_validator
 from typing import Optional
 from datetime import date, datetime
 
+# ── Sorteo ──────────────────────────────────────────────
 class SorteoCreate(BaseModel):
     nombre:                   str
     descripcion:              Optional[str]     = None
@@ -35,7 +36,6 @@ class SorteoCreate(BaseModel):
                 )
         return self
 
-
 class SorteoUpdate(BaseModel):
     nombre:                   Optional[str]     = None
     descripcion:              Optional[str]     = None
@@ -47,7 +47,6 @@ class SorteoUpdate(BaseModel):
     fecha_nacimiento_maxima:  Optional[date]    = None
     fecha_nacimiento_minima:  Optional[date]    = None
     fecha_alta_maxima:        Optional[date]    = None
-
 
 class SorteoOutput(BaseModel):
     id:                       str
@@ -67,6 +66,25 @@ class SorteoOutput(BaseModel):
     usuario_creacion:         str
     inscritos:                int               = 0
 
-
 class SorteoCancelarInput(BaseModel):
     motivo_cancelacion: str
+
+# ── Inscripciones  ─────────────────────────────────────
+class InscripcionCreate(BaseModel):
+    socio_id: str
+
+class InscripcionOutput(BaseModel):
+    id:                     str
+    sorteo_id:              str
+    socio_id:               str
+    usuario_inscripcion:    str
+    fecha_inscripcion:      datetime
+    es_ganador:             bool
+    estado:                 str
+    fecha_cancelacion:      Optional[datetime] = None
+    usuario_cancelacion:    Optional[str]      = None
+
+    # Datos del socio para mostrar en el listado
+    socio_nombre:           Optional[str] = None
+    socio_apellidos:        Optional[str] = None
+    socio_numero:           Optional[int] = None

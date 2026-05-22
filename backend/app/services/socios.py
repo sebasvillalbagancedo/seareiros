@@ -22,7 +22,6 @@ def get_socios_usuario(usuario: Usuario, session: Session) -> list[Socio]:
     )
     return session.exec(statement).all()
 
-
 def get_socio_usuario(socio_id: str, usuario: Usuario, session: Session) -> Socio | None:
     """
     Devuelve el socio si el usuario tiene acceso a él, None si no.

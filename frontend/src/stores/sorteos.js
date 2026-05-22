@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import api from '@/services/api'
 
 export const useSorteosStore  = defineStore('sorteos', () => {
@@ -7,6 +7,14 @@ export const useSorteosStore  = defineStore('sorteos', () => {
   const inscripciones   = ref([])
   const cargando        = ref(false)
   const error           = ref(null)
+
+  const inscripcionesActivas = computed(() =>
+    inscripciones.value.filter(i => i.estado === 'activa')
+  )
+
+  const idsSociosInscritos = computed(() =>
+    inscripcionesActivas.value.map(i => i.socio_id)
+  )
 
   async function cargar() {
     cargando.value = true
@@ -72,5 +80,12 @@ export const useSorteosStore  = defineStore('sorteos', () => {
     return data
   }
 
-  return { sorteos, inscripciones, cargando, error, cargar, crear, editar, cancelar , resolver, cargarInscripciones, inscribir, cancelarInscripcion }
+  function limpiar() {
+    sorteos.value       = []
+    inscripciones.value = []
+    error.value         = null
+  }
+
+  return { sorteos, inscripciones, cargando, error, inscripcionesActivas, idsSociosInscritos, 
+            cargar, crear, editar, cancelar , resolver, cargarInscripciones, inscribir, cancelarInscripcion, limpiar }
 })

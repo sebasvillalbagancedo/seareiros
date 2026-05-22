@@ -1,7 +1,6 @@
 <template>
   <div class="modal-overlay" @click.self="$emit('cerrar')">
     <div class="modal">
-
       <div class="modal-header">
         <h3>{{ modo === 'crear' ? 'Nuevo socio' : 'Editar socio' }}</h3>
         <button class="btn-cerrar" @click="$emit('cerrar')">✕</button>
@@ -9,7 +8,6 @@
 
       <form @submit.prevent="handleSubmit">
         <div class="modal-body">
-
           <div class="fila-campos">
             <div class="campo">
               <label>Nombre *</label>
@@ -69,7 +67,6 @@
           </div>
 
           <p v-if="errorForm" class="error">{{ errorForm }}</p>
-
         </div>
 
         <div class="modal-footer">
@@ -79,74 +76,73 @@
           </button>
         </div>
       </form>
-
     </div>
   </div>
 </template>
 
 <script>
-export default {
-  name: 'SocioFormModal',
-  emits: ['cerrar', 'guardado'],
+  export default {
+    name: 'SocioFormModal',
+    emits: ['cerrar', 'guardado'],
 
-  props: {
-    modo:  { type: String, default: 'crear' },
-    socio: { type: Object, default: null },
-  },
+    props: {
+      modo: { type: String, default: 'crear' },
+      socio: { type: Object, default: null },
+    },
 
-  data() {
-    return {
-      form: {
-        nombre:           '',
-        apellidos:        '',
-        fecha_nacimiento: null,
-        email:            '',
-        telefono_movil:   '',
-        telefono_fijo:    '',
-        direccion:        '',
-        codigo_postal:    '',
-        localidad:        '',
-        provincia:        '',
-        pais:             '',
+    data() {
+      return {
+        form: {
+          nombre: '',
+          apellidos: '',
+          fecha_nacimiento: null,
+          email: '',
+          telefono_movil: '',
+          telefono_fijo: '',
+          direccion: '',
+          codigo_postal: '',
+          localidad: '',
+          provincia: '',
+          pais: '',
+        },
+        guardando: false,
+        errorForm: null,
+      }
+    },
+
+    created() {
+      if (this.modo === 'editar' && this.socio) {
+        this.form = {
+          nombre: this.socio.nombre || '',
+          apellidos: this.socio.apellidos || '',
+          fecha_nacimiento: this.socio.fecha_nacimiento || null,
+          email: this.socio.email || '',
+          telefono_movil: this.socio.telefono_movil || '',
+          telefono_fijo: this.socio.telefono_fijo || '',
+          direccion: this.socio.direccion || '',
+          codigo_postal: this.socio.codigo_postal || '',
+          localidad: this.socio.localidad || '',
+          provincia: this.socio.provincia || '',
+          pais: this.socio.pais || '',
+        }
+      }
+    },
+
+    methods: {
+      async handleSubmit() {
+        this.errorForm = null
+        this.guardando = true
+        const datos = Object.fromEntries(
+          Object.entries(this.form).filter(([, v]) => v !== '' && v !== null),
+        )
+        try {
+          this.$emit('guardado', datos)
+        } catch {
+          this.errorForm = 'Error al guardar. Inténtalo de nuevo.'
+        } finally {
+          this.guardando = false
+        }
       },
-      guardando: false,
-      errorForm: null,
-    }
-  },
-
-  created() {
-    if (this.modo === 'editar' && this.socio) {
-      this.form = {
-        nombre:           this.socio.nombre          || '',
-        apellidos:        this.socio.apellidos        || '',
-        fecha_nacimiento: this.socio.fecha_nacimiento || null,
-        email:            this.socio.email            || '',
-        telefono_movil:   this.socio.telefono_movil   || '',
-        telefono_fijo:    this.socio.telefono_fijo    || '',
-        direccion:        this.socio.direccion        || '',
-        codigo_postal:    this.socio.codigo_postal    || '',
-        localidad:        this.socio.localidad        || '',
-        provincia:        this.socio.provincia        || '',
-        pais:             this.socio.pais             || '',
-      }
-    }
-  },
-
-  methods: {
-    async handleSubmit() {
-      this.errorForm = null
-      this.guardando = true
-      const datos = Object.fromEntries(
-        Object.entries(this.form).filter(([, v]) => v !== '' && v !== null)
-      )
-      try {
-        this.$emit('guardado', datos)
-      } catch {
-        this.errorForm = 'Error al guardar. Inténtalo de nuevo.'
-      } finally {
-        this.guardando = false
-      }
-    }
+    },
   }
-}
 </script>

@@ -75,7 +75,27 @@ input:focus {
 .btn-accion:hover { background: #e0e0e0; }
 .btn-accion.btn-baja { background: #fde8e8; color: #c0392b; }
 .btn-accion.btn-baja:hover { background: #f5c6c2; }
- 
+
+.btn-cerrar {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: #999;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.btn-cerrar:hover { background: #f0f0f0; color: #333; }
+
+.btn-baja-modal {
+  background: #c0392b;
+}
+
+.btn-baja-modal:hover:not(:disabled) {
+  background: #a93226;
+}
+
 /* ── Tablas ──────────────────────────────────────────────────── */
 .tabla-wrapper {
   overflow-x: auto;
@@ -108,7 +128,7 @@ td.acciones { white-space: nowrap; }
  
 .fila-baja td { color: #aaa; }
  
-/* ── Badges de estado ────────────────────────────────────────── */
+/* ── Badges ────────────────────────────────────────────────────────── */
 .badge {
   display: inline-block;
   padding: 2px 10px;
@@ -120,7 +140,38 @@ td.acciones { white-space: nowrap; }
  
 .badge-activo { background: #d5f5e3; color: #1e8449; }
 .badge-baja   { background: #fde8e8; color: #c0392b; }
- 
+.badge-pendiente { background: #fef9c3; color: #854d0e; }
+.badge-resuelto  { background: #dbeafe; color: #1e40af; }
+
+.sidebar-badge {
+  margin-left: auto;
+}
+
+.badge-noLeidos {
+  background: #e74c3c;
+  color: white;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.badge-directo {
+  background: #e8ecf0;
+  color: #555;
+}
+
+.badge-modalidad {
+  font-size: 0.72rem;
+  color: #888;
+  background: #f0f0f0;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-weight: 400;
+}
+
 /* ── Cabecera de módulo ──────────────────────────────────────── */
 .modulo-view {
   padding: 32px;
@@ -174,18 +225,6 @@ td.acciones { white-space: nowrap; }
   margin: 0;
 }
  
-.btn-cerrar {
-  background: none;
-  border: none;
-  font-size: 1.1rem;
-  color: #999;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
- 
-.btn-cerrar:hover { background: #f0f0f0; color: #333; }
- 
 .modal-body {
   padding: 20px 24px;
   overflow-y: auto;
@@ -203,7 +242,17 @@ td.acciones { white-space: nowrap; }
   padding: 16px 24px;
   border-top: 1px solid #eee;
 }
- 
+
+/* ── Modal pequeño para confirmaciones ──────────────────────── */
+.modal-sm   { max-width: 460px; }
+.modal-wide { max-width: 860px; }
+
+/* ── Modal de Inscripción ───────────────────────────────────── */
+.select-full { width: 100%; }
+.texto-limite { color: #999; font-size: 0.85rem; }
+.seccion-inscribir { margin-bottom: 20px; }
+.seccion-inscribir h4 { font-size: 0.95rem; color: #2c3e50; margin-bottom: 10px; font-weight: 600; }
+
 /* ── Formularios ─────────────────────────────────────────────── */
 .campo {
   margin-bottom: 16px;
@@ -384,7 +433,7 @@ td.acciones { white-space: nowrap; }
   margin-bottom: 28px;
 }
  
-/* ── Socios — barra de filtros ───────────────────────────────── */
+/* ── Barra de filtros ──────────────────────────────────────────────── */
 .barra-filtros {
   display: flex;
   gap: 12px;
@@ -405,40 +454,279 @@ td.acciones { white-space: nowrap; }
   cursor: pointer;
 }
 
-/* ── Badges adicionales de sorteos ──────────────────────────── */
-.badge-pendiente { background: #fef9c3; color: #854d0e; }
-.badge-resuelto  { background: #dbeafe; color: #1e40af; }
-
-/* ── Modal pequeño para confirmaciones ──────────────────────── */
-.modal-sm   { max-width: 460px; }
-.modal-wide { max-width: 860px; }
-
-/* ── Barra de filtros de sorteos ─────────────────────────────── */
-.barra-filtros {
+/* ── Chat — layout general ───────────────────────────────────── */
+.chat-layout {
   display: flex;
-  gap: 12px;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Chat — panel izquierdo ──────────────────────────────────── */
+.chat-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid #e0e0e0;
+  background: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-sidebar-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.chat-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #555;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  width: 100%;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+
+.chat-nav-btn:hover {
+  background: #eef0f2;
+  color: #2c3e50;
+}
+
+.chat-tabs {
+  display: flex;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.chat-tab {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 0.8rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  color: #777;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.chat-tab:hover { color: #2c3e50; }
+
+.chat-tab-activa {
+  color: #2c3e50;
+  font-weight: 600;
+  border-bottom-color: #2c3e50;
+}
+
+.badge-restringido {
+  font-size: 0.7rem;
+  background: #fef3cd;
+  color: #856404;
+}
+
+.chat-lista {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.chat-entrada {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.chat-entrada:hover { background: #eef0f2; }
+.chat-entrada.activa { background: #e8ecf0; }
+
+.chat-entrada-nombre {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.chat-entrada-preview {
+  font-size: 0.82rem;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* ── Chat — panel derecho ────────────────────────────────────── */
+.chat-contenido {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-bienvenida {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  color: #888;
+}
+
+.chat-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  background: white;
+  flex-shrink: 0;
+}
+
+.chat-cabecera-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+}
+
+.chat-cabecera-acciones {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-modalidad {
+  font-size: 0.78rem;
+  color: #888;
+  background: #f0f0f0;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.chat-mensajes {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f7f8fa;
+}
+
+.chat-mensaje {
+  display: flex;
+  flex-direction: column;
+  max-width: 70%;
+}
+
+.chat-mensaje.propio {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.chat-mensaje-autor {
+  font-size: 0.78rem;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.chat-mensaje.propio .chat-mensaje-autor { display: none; }
+
+.chat-mensaje-burbuja {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  color: #333;
+  word-break: break-word;
+}
+
+.chat-mensaje.propio .chat-mensaje-burbuja {
+  background: #2c3e50;
+  color: white;
+  border-color: #2c3e50;
+}
+
+.chat-mensaje-hora {
+  font-size: 0.72rem;
+  color: #aaa;
+  margin-top: 2px;
+}
+
+.chat-entrada-mensaje {
+  display: flex;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid #e0e0e0;
+  background: white;
+  flex-shrink: 0;
+}
+
+.chat-entrada-mensaje input {
+  flex: 1;
+}
+
+.chat-sin-permiso {
+  text-align: center;
+  color: #aaa;
+  font-size: 0.85rem;
+  padding: 12px 20px;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+}
+
+.chat-vacio {
+  color: #aaa;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 20px;
+}
+
+/* ── Chat — filtro del sidebar ───────────────────────────────── */
+.chat-sidebar-filtro {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.chat-sidebar-filtro .input-busqueda {
+  width: 100%;
+  max-width: 100%;
+  font-size: 0.85rem;
+  padding: 7px 10px;
+}
+
+/* ── Chat — sección dentro de modal ─────────────────────────── */
+.seccion-chat {
   margin-bottom: 20px;
 }
 
-.input-busqueda { flex: 1; max-width: 360px; }
+.seccion-chat h4 {
+  font-size: 0.9rem;
+  color: #2c3e50;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
 
-.select-filtro {
-  padding: 10px 12px;
-  border: 1px solid #ccc;
+.chat-error-envio {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: #fde8e8;
+  border: 1px solid #f5c6c2;
   border-radius: 6px;
-  font-size: 0.95rem;
-  background: white;
-  cursor: pointer;
+  padding: 8px 14px;
 }
-
-.btn-baja-modal {
-  background: #c0392b;
-}
-
-.btn-baja-modal:hover:not(:disabled) {
-  background: #a93226;
-}
-
-/* ── Para Modal de Inscripción ──────────────────────── */
-.select-full { width: 100%; }
-.texto-limite { color: #999; font-size: 0.85rem; }

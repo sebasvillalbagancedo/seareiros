@@ -3,3 +3,9 @@ from app.models.socio import Socio
 from app.models.usuario_socio import UsuarioSocio
 from app.models.sorteo import Sorteo
 from app.models.inscripcion_sorteo import InscripcionSorteo
+from app.models.chat import Chat
+from app.models.miembro_chat import MiembroChat
+from app.models.solicitud_chat import SolicitudChat
+from app.models.invitacion_chat import InvitacionChat
+from app.models.mensaje import Mensaje
+from app.models.mensaje_destinatario import MensajeDestinatario

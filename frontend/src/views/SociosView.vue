@@ -1,11 +1,8 @@
 <template>
   <div class="modulo-view">
-
     <div class="modulo-header">
       <h2>Socios</h2>
-      <button v-if="esAdmin" class="btn-primario" @click="abrirModalCrear">
-        + Nuevo socio
-      </button>
+      <button v-if="esAdmin" class="btn-primario" @click="abrirModalCrear">+ Nuevo socio</button>
     </div>
 
     <!-- Búsqueda y filtrado — RF.0204 -->
@@ -40,16 +37,21 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="socio in sociosFiltrados" :key="socio.id"
-              :class="{ 'fila-baja': socio.estado === 'baja' }">
+          <tr
+            v-for="socio in sociosFiltrados"
+            :key="socio.id"
+            :class="{ 'fila-baja': socio.estado === 'baja' }"
+          >
             <td>{{ socio.numero_socio }}</td>
             <td>{{ socio.nombre }}</td>
             <td>{{ socio.apellidos }}</td>
             <td>{{ socio.email || '—' }}</td>
             <td>{{ socio.telefono_movil || socio.telefono_fijo || '—' }}</td>
             <td>
-              <span class="badge"
-                    :class="socio.estado === 'activo' ? 'badge-activo' : 'badge-baja'">
+              <span
+                class="badge"
+                :class="socio.estado === 'activo' ? 'badge-activo' : 'badge-baja'"
+              >
                 {{ socio.estado }}
               </span>
             </td>
@@ -62,11 +64,7 @@
               >
                 Baja
               </button>
-              <button
-                v-if="esAdmin"
-                class="btn-accion"
-                @click="abrirModalPermisos(socio)"
-              >
+              <button v-if="esAdmin" class="btn-accion" @click="abrirModalPermisos(socio)">
                 Permisos
               </button>
             </td>
@@ -102,102 +100,109 @@
 </template>
 
 <script>
-import { useSociosStore } from '@/stores/socios'
-import { useUsuariosStore } from '@/stores/usuarios'
-import SocioFormModal     from '@/components/SocioFormModal.vue'
-import PermisosModal      from '@/components/PermisosModal.vue'
-export default {
-  name: 'SociosView',
-  components: { SocioFormModal, PermisosModal },
+  import { useSociosStore } from '@/stores/socios'
+  import { useUsuariosStore } from '@/stores/usuarios'
+  import SocioFormModal from '@/components/SocioFormModal.vue'
+  import PermisosModal from '@/components/PermisosModal.vue'
+  export default {
+    name: 'SociosView',
+    components: { SocioFormModal, PermisosModal },
 
-  data() {
-    return {
-      modalVisible:      false,
-      modalModo:         'crear',
-      socioSeleccionado: null,
-      mensajeExito:      null,
-      permisosModalVisible: false,
-      textoBusqueda:        '',
-      filtroEstado:         'activo',
-    }
-  },
-
-  computed: {
-    store()   { return useSociosStore() },
-    esAdmin() { return useUsuariosStore().usuario?.rol === 'administrador' },
-    sociosFiltrados() {
-      return this.store.socios.filter(s => {
-        const texto = this.textoBusqueda.toLowerCase()
-        const coincideTexto = !texto ||
-          s.nombre.toLowerCase().includes(texto) ||
-          s.apellidos.toLowerCase().includes(texto)
-        const coincideEstado = !this.filtroEstado || s.estado === this.filtroEstado
-        return coincideTexto && coincideEstado
-      })
-    }
-  },
-
-  async created() {
-    await useSociosStore().cargar()
-  },
-
-  methods: {
-    abrirModalCrear() {
-      this.socioSeleccionado = null
-      this.modalModo         = 'crear'
-      this.modalVisible      = true
+    data() {
+      return {
+        modalVisible: false,
+        modalModo: 'crear',
+        socioSeleccionado: null,
+        mensajeExito: null,
+        permisosModalVisible: false,
+        textoBusqueda: '',
+        filtroEstado: 'activo',
+      }
     },
 
-    abrirModalEditar(socio) {
-      this.socioSeleccionado = socio
-      this.modalModo         = 'editar'
-      this.modalVisible      = true
+    computed: {
+      store() {
+        return useSociosStore()
+      },
+      esAdmin() {
+        return useUsuariosStore().usuario?.rol === 'administrador'
+      },
+      sociosFiltrados() {
+        return this.store.socios.filter((s) => {
+          const texto = this.textoBusqueda.toLowerCase()
+          const coincideTexto =
+            !texto ||
+            s.nombre.toLowerCase().includes(texto) ||
+            s.apellidos.toLowerCase().includes(texto)
+          const coincideEstado = !this.filtroEstado || s.estado === this.filtroEstado
+          return coincideTexto && coincideEstado
+        })
+      },
     },
 
-    cerrarModal() {
-      this.modalVisible      = false
-      this.socioSeleccionado = null
+    async created() {
+      await useSociosStore().cargar()
     },
 
-    abrirModalPermisos(socio) {
-      this.socioSeleccionado    = socio
-      this.permisosModalVisible = true
-    },
+    methods: {
+      abrirModalCrear() {
+        this.socioSeleccionado = null
+        this.modalModo = 'crear'
+        this.modalVisible = true
+      },
 
-    cerrarModalPermisos() {
-      this.permisosModalVisible = false
-      this.socioSeleccionado    = null
-    },
+      abrirModalEditar(socio) {
+        this.socioSeleccionado = socio
+        this.modalModo = 'editar'
+        this.modalVisible = true
+      },
 
-    async handleGuardado(datos) {
-      try {
-        if (this.modalModo === 'crear') {
-          await this.store.crear(datos)
-          this.mostrarExito('Socio creado correctamente.')
-        } else {
-          await this.store.editar(this.socioSeleccionado.id, datos)
-          this.mostrarExito('Socio actualizado correctamente.')
+      cerrarModal() {
+        this.modalVisible = false
+        this.socioSeleccionado = null
+      },
+
+      abrirModalPermisos(socio) {
+        this.socioSeleccionado = socio
+        this.permisosModalVisible = true
+      },
+
+      cerrarModalPermisos() {
+        this.permisosModalVisible = false
+        this.socioSeleccionado = null
+      },
+
+      async handleGuardado(datos) {
+        try {
+          if (this.modalModo === 'crear') {
+            await this.store.crear(datos)
+            this.mostrarExito('Socio creado correctamente.')
+          } else {
+            await this.store.editar(this.socioSeleccionado.id, datos)
+            this.mostrarExito('Socio actualizado correctamente.')
+          }
+          this.cerrarModal()
+        } catch {
+          // el error lo gestiona el modal
         }
-        this.cerrarModal()
-      } catch {
-        // el error lo gestiona el modal
-      }
-    },
+      },
 
-    async confirmarBaja(socio) {
-      if (!confirm(`¿Dar de baja a ${socio.nombre} ${socio.apellidos}?`)) return
-      try {
-        await this.store.darBaja(socio.id)
-        this.mostrarExito('Socio dado de baja correctamente.')
-      } catch {
-        alert('Error al dar de baja al socio.')
-      }
-    },
+      async confirmarBaja(socio) {
+        if (!confirm(`¿Dar de baja a ${socio.nombre} ${socio.apellidos}?`)) return
+        try {
+          await this.store.darBaja(socio.id)
+          this.mostrarExito('Socio dado de baja correctamente.')
+        } catch {
+          alert('Error al dar de baja al socio.')
+        }
+      },
 
-    mostrarExito(msg) {
-      this.mensajeExito = msg
-      setTimeout(() => { this.mensajeExito = null }, 3000)
-    }
+      mostrarExito(msg) {
+        this.mensajeExito = msg
+        setTimeout(() => {
+          this.mensajeExito = null
+        }, 3000)
+      },
+    },
   }
-}
 </script>

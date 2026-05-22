@@ -6,10 +6,7 @@ from app.models.inscripcion_sorteo import InscripcionSorteo
 from app.models.socio import Socio
 from app.models.usuario import Usuario
 from app.models.usuario_socio import UsuarioSocio
-from app.schemas.sorteo import (
-    SorteoCreate, SorteoUpdate, SorteoOutput, SorteoCancelarInput
-)
-from app.schemas.inscripcion_sorteo import InscripcionCreate, InscripcionOutput
+from app.schemas.sorteo import (SorteoCreate, SorteoUpdate, SorteoOutput, SorteoCancelarInput, InscripcionCreate, InscripcionOutput)
 from app.services.sorteos import (
     get_sorteos, get_sorteo, crear_sorteo, editar_sorteo,
     cancelar_sorteo, get_inscripciones, inscribir_socio,
@@ -20,8 +17,7 @@ import uuid
 
 router = APIRouter(prefix="/sorteos", tags=["Sorteos"])
 
-
-# ── Helper para construir SorteoOutput ────────────────────────────
+# ── Helpers para construir outputs ────────────────────────────
 
 def _sorteo_to_output(sorteo: Sorteo, session: Session) -> SorteoOutput:
     """Construye un SorteoOutput con el número de inscritos calculado."""
@@ -44,9 +40,6 @@ def _sorteo_to_output(sorteo: Sorteo, session: Session) -> SorteoOutput:
         inscritos=contar_inscritos(sorteo.id, session)
     )
 
-
-# ── Helper para construir InscripcionOutput ───────────────────────
-
 def _inscripcion_to_output(
     inscripcion: InscripcionSorteo,
     socio: Socio
@@ -68,11 +61,12 @@ def _inscripcion_to_output(
         socio_numero=socio.numero_socio,
     )
 
-
 # ── Endpoints de sorteos ──────────────────────────────────────────
 
-@router.get('', response_model=list[SorteoOutput], summary='Listar Sorteos')
-def get_sorteos_list(
+@router.get('', 
+            response_model=list[SorteoOutput], 
+            summary='Listar Sorteos')
+def get_sorteos_list_ep(
     usuario: Usuario = Depends(get_usuario_actual),
     session: Session = Depends(get_session)
 ):
@@ -80,9 +74,11 @@ def get_sorteos_list(
     sorteos = get_sorteos(session)
     return [_sorteo_to_output(s, session) for s in sorteos]
 
-
-@router.post('', response_model=SorteoOutput, status_code=status.HTTP_201_CREATED, summary='Crear Sorteo')
-def post_sorteo(
+@router.post('', 
+             response_model=SorteoOutput, 
+             status_code=status.HTTP_201_CREATED, 
+             summary='Crear Sorteo')
+def post_sorteo_ep(
     datos: SorteoCreate,
     usuario: Usuario = Depends(get_usuario_actual),
     session: Session = Depends(get_session)
@@ -94,9 +90,10 @@ def post_sorteo(
     sorteo = crear_sorteo(datos, usuario, session)
     return _sorteo_to_output(sorteo, session)
 
-
-@router.get('/{sorteo_id}', response_model=SorteoOutput, summary='Obtener Sorteo')
-def get_sorteo_by_id(
+@router.get('/{sorteo_id}', 
+            response_model=SorteoOutput, 
+            summary='Obtener Sorteo')
+def get_sorteo_by_id_ep(
     sorteo_id: str,
     usuario: Usuario = Depends(get_usuario_actual),
     session: Session = Depends(get_session)
@@ -107,9 +104,10 @@ def get_sorteo_by_id(
         raise HTTPException(status_code=404, detail="Sorteo no encontrado")
     return _sorteo_to_output(sorteo, session)
 
-
-@router.put('/{sorteo_id}', response_model=SorteoOutput, summary='Editar Sorteo')
-def put_sorteo(
+@router.put('/{sorteo_id}', 
+            response_model=SorteoOutput, 
+            summary='Editar Sorteo')
+def put_sorteo_ep(
     sorteo_id: str,
     datos: SorteoUpdate,
     usuario: Usuario = Depends(get_usuario_actual),
@@ -128,9 +126,10 @@ def put_sorteo(
     sorteo = editar_sorteo(sorteo, datos, session)
     return _sorteo_to_output(sorteo, session)
 
-
-@router.patch('/{sorteo_id}/cancelar', response_model=SorteoOutput, summary='Cancelar Sorteo')
-def patch_sorteo_cancelar(
+@router.patch('/{sorteo_id}/cancelar', 
+              response_model=SorteoOutput, 
+              summary='Cancelar Sorteo')
+def patch_sorteo_cancelar_ep(
     sorteo_id: str,
     datos: SorteoCancelarInput,
     usuario: Usuario = Depends(get_usuario_actual),
@@ -149,9 +148,10 @@ def patch_sorteo_cancelar(
     sorteo = cancelar_sorteo(sorteo, datos.motivo_cancelacion, session)
     return _sorteo_to_output(sorteo, session)
 
-
-@router.patch('/{sorteo_id}/resolver', response_model=SorteoOutput, summary='Resolver Sorteo')
-def patch_sorteo_resolver(
+@router.patch('/{sorteo_id}/resolver', 
+              response_model=SorteoOutput, 
+              summary='Resolver Sorteo')
+def patch_sorteo_resolver_ep(
     sorteo_id: str,
     usuario: Usuario = Depends(get_usuario_actual),
     session: Session = Depends(get_session)
@@ -173,11 +173,12 @@ def patch_sorteo_resolver(
     sorteo, _ = resolver_sorteo(sorteo, session)
     return _sorteo_to_output(sorteo, session)
 
-
 # ── Endpoints de inscripciones ────────────────────────────────────
 
-@router.get('/{sorteo_id}/inscripciones', response_model=list[InscripcionOutput], summary='Listar Inscripciones Sorteo')
-def get_inscripciones_sorteo(
+@router.get('/{sorteo_id}/inscripciones', 
+            response_model=list[InscripcionOutput], 
+            summary='Listar Inscripciones Sorteo')
+def get_inscripciones_sorteo_ep(
     sorteo_id: str,
     usuario: Usuario = Depends(get_usuario_actual),
     session: Session = Depends(get_session)
@@ -189,10 +190,11 @@ def get_inscripciones_sorteo(
     resultados = get_inscripciones(sorteo_id, session)
     return [_inscripcion_to_output(i, s) for i, s in resultados]
 
-
-@router.post('/{sorteo_id}/inscripciones', response_model=InscripcionOutput,
-             status_code=status.HTTP_201_CREATED, summary='Inscribir Socio')
-def post_inscripcion(
+@router.post('/{sorteo_id}/inscripciones', 
+             response_model=InscripcionOutput,
+             status_code=status.HTTP_201_CREATED, 
+             summary='Inscribir Socio')
+def post_inscripcion_ep(
     sorteo_id: str,
     datos: InscripcionCreate,
     usuario: Usuario = Depends(get_usuario_actual),
@@ -230,10 +232,10 @@ def post_inscripcion(
 
     return _inscripcion_to_output(inscripcion, socio)
 
-
 @router.patch('/{sorteo_id}/inscripciones/{inscripcion_id}',
-              response_model=InscripcionOutput, summary='Cancelar Inscripción')
-def patch_inscripcion(
+              response_model=InscripcionOutput, 
+              summary='Cancelar Inscripción')
+def patch_inscripcion_ep(
     sorteo_id: str,
     inscripcion_id: str,
     usuario: Usuario = Depends(get_usuario_actual),

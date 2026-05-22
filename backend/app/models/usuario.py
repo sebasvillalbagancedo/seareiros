@@ -5,10 +5,7 @@ import uuid
 
 class Usuario(SQLModel, table=True):
     __tablename__ = 'usuarios'
-    id:                     uuid.UUID           = Field(
-                                                    default_factory=uuid.uuid4, 
-                                                    primary_key=True
-                                                    )
+    id:                     uuid.UUID           = Field(default_factory=uuid.uuid4, primary_key=True)
     codigo_usuario:         str                 = Field(max_length=50, unique=True) 
     email:                  str                 = Field(max_length=255, unique=True)
     contrasena_cifrada:     str                 = Field(max_length=255)

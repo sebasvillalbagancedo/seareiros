@@ -5,10 +5,7 @@ import uuid
 
 class UsuarioSocio(SQLModel, table=True):
     __tablename__ = 'usuarios_socios'
-    id:                     uuid.UUID           = Field(
-                                                    default_factory=uuid.uuid4, 
-                                                    primary_key=True
-                                                    )
+    id:                     uuid.UUID           = Field(default_factory=uuid.uuid4, primary_key=True)
     usuario_id:             uuid.UUID           = Field(foreign_key="usuarios.id")
     socio_id:               uuid.UUID           = Field(foreign_key="socios.id")
     fecha_asignacion:       datetime            = Field(default_factory=datetime.now)

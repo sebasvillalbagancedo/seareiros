@@ -1,26 +1,23 @@
 <template>
   <div class="modal-overlay" @click.self="$emit('cerrar')">
     <div class="modal modal-wide">
-
       <div class="modal-header">
-        <h3>{{ sorteo.estado === 'resuelto' ? 'Resultados' : 'Inscripciones' }} — {{ sorteo.nombre }}</h3>
+        <h3>
+          {{ sorteo.estado === 'resuelto' ? 'Resultados' : 'Inscripciones' }} —
+          {{ sorteo.nombre }}
+        </h3>
         <button class="btn-cerrar" @click="$emit('cerrar')">✕</button>
       </div>
 
       <div class="modal-body">
-
         <!-- Inscribir socio (solo si el sorteo está abierto) -->
         <div v-if="sorteoAbierto" class="seccion-inscribir">
           <h4>Inscribir socio</h4>
           <div class="fila-campos">
             <div class="campo">
-              <select v-model="socioSeleccionado" class="select-filtro" style="width:100%">
+              <select v-model="socioSeleccionado" class="select-full">
                 <option value="">— Selecciona un socio —</option>
-                <option
-                  v-for="s in sociosDisponibles"
-                  :key="s.id"
-                  :value="s.id"
-                >
+                <option v-for="s in sociosDisponibles" :key="s.id" :value="s.id">
                   {{ s.numero_socio }} — {{ s.nombre }} {{ s.apellidos }}
                 </option>
               </select>
@@ -58,8 +55,11 @@
                 <td>{{ i.socio_apellidos }}</td>
                 <td>{{ formatFecha(i.fecha_inscripcion) }}</td>
                 <td>
-                  <span v-if="sorteo.estado === 'resuelto'" class="badge"
-                        :class="i.es_ganador ? 'badge-activo' : 'badge-baja'">
+                  <span
+                    v-if="sorteo.estado === 'resuelto'"
+                    class="badge"
+                    :class="i.es_ganador ? 'badge-activo' : 'badge-baja'"
+                  >
                     {{ i.es_ganador ? 'Sí' : 'No' }}
                   </span>
                   <span v-else>—</span>
@@ -83,105 +83,98 @@
         </p>
 
         <p v-if="mensajeExito" class="exito">{{ mensajeExito }}</p>
-
       </div>
 
       <div class="modal-footer">
         <button class="btn-secundario" @click="$emit('cerrar')">Cerrar</button>
       </div>
-
     </div>
   </div>
 </template>
 
 <script>
-import { useSorteosStore } from '@/stores/sorteos'
-import { useSociosStore }  from '@/stores/socios'
+  import { useSorteosStore } from '@/stores/sorteos'
+  import { useSociosStore } from '@/stores/socios'
+  import { formatFecha } from '@/utils/fecha'
 
-export default {
-  name: 'InscripcionesModal',
-  emits: ['cerrar'],
+  export default {
+    name: 'InscripcionesModal',
+    emits: ['cerrar'],
 
-  props: {
-    sorteo: { type: Object, required: true },
-  },
-
-  data() {
-    return {
-      socioSeleccionado: '',
-      inscribiendo:      false,
-      cancelando:        null,
-      cargando:          false,
-      errorInscripcion:  null,
-      mensajeExito:      null,
-    }
-  },
-
-  computed: {
-    sorteoAbierto() {
-      return this.sorteo.estado === 'abierto'
+    props: {
+      sorteo: { type: Object, required: true },
     },
 
-    inscripcionesActivas() {
-      return useSorteosStore().inscripciones.filter(i => i.estado === 'activa')
-    },
-
-    // Socios disponibles: activos y no ya inscritos
-    sociosDisponibles() {
-      const idsInscritos = useSorteosStore().inscripciones
-        .filter(i => i.estado === 'activa')
-        .map(i => i.socio_id)
-      return useSociosStore().socios.filter(
-        s => s.estado === 'activo' && !idsInscritos.includes(s.id)
-      )
-    },
-  },
-
-  async created() {
-    this.cargando = true
-    await useSorteosStore().cargarInscripciones(this.sorteo.id)
-    this.cargando = false
-  },
-
-  methods: {
-    formatFecha(iso) {
-      if (!iso) return '—'
-      return new Date(iso).toLocaleDateString('es-ES', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-      })
-    },
-
-    async inscribir() {
-      this.errorInscripcion = null
-      this.inscribiendo     = true
-      try {
-        await useSorteosStore().inscribir(this.sorteo.id, this.socioSeleccionado)
-        this.socioSeleccionado = ''
-        this.mostrarExito('Socio inscrito correctamente.')
-      } catch (e) {
-        this.errorInscripcion = e.response?.data?.detail || 'Error al inscribir el socio.'
-      } finally {
-        this.inscribiendo = false
+    data() {
+      return {
+        socioSeleccionado: '',
+        inscribiendo: false,
+        cancelando: null,
+        cargando: false,
+        errorInscripcion: null,
+        mensajeExito: null,
       }
     },
 
-    async cancelarInscripcion(inscripcion) {
-      this.cancelando = inscripcion.id
-      try {
-        await useSorteosStore().cancelarInscripcion(this.sorteo.id, inscripcion.id)
-        this.mostrarExito('Inscripción cancelada correctamente.')
-      } catch {
-        this.errorInscripcion = 'Error al cancelar la inscripción.'
-      } finally {
-        this.cancelando = null
-      }
+    computed: {
+      sorteoAbierto() {
+        return this.sorteo.estado === 'abierto'
+      },
+
+      inscripcionesActivas() {
+        return useSorteosStore().inscripcionesActivas
+      },
+
+      // Socios disponibles: activos y no ya inscritos
+      sociosDisponibles() {
+        const idsInscritos = useSorteosStore().idsSociosInscritos
+        return useSociosStore().socios.filter(
+          (s) => s.estado === 'activo' && !idsInscritos.includes(s.id),
+        )
+      },
     },
 
-    mostrarExito(msg) {
-      this.mensajeExito = msg
-      setTimeout(() => { this.mensajeExito = null }, 3000)
-    }
+    async created() {
+      this.cargando = true
+      await useSorteosStore().cargarInscripciones(this.sorteo.id)
+      this.cargando = false
+    },
+
+    methods: {
+      formatFecha,
+
+      async inscribir() {
+        this.errorInscripcion = null
+        this.inscribiendo = true
+        try {
+          await useSorteosStore().inscribir(this.sorteo.id, this.socioSeleccionado)
+          this.socioSeleccionado = ''
+          this.mostrarExito('Socio inscrito correctamente.')
+        } catch (e) {
+          this.errorInscripcion = e.response?.data?.detail || 'Error al inscribir el socio.'
+        } finally {
+          this.inscribiendo = false
+        }
+      },
+
+      async cancelarInscripcion(inscripcion) {
+        this.cancelando = inscripcion.id
+        try {
+          await useSorteosStore().cancelarInscripcion(this.sorteo.id, inscripcion.id)
+          this.mostrarExito('Inscripción cancelada correctamente.')
+        } catch {
+          this.errorInscripcion = 'Error al cancelar la inscripción.'
+        } finally {
+          this.cancelando = null
+        }
+      },
+
+      mostrarExito(msg) {
+        this.mensajeExito = msg
+        setTimeout(() => {
+          this.mensajeExito = null
+        }, 3000)
+      },
+    },
   }
-}
 </script>

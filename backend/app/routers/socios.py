@@ -12,7 +12,6 @@ import uuid
 
 router = APIRouter(prefix="/socios", tags=["Socios"])
 
-
 # ── Helper para construir SocioOutput ────────────────────────────
 
 def _socio_to_output(socio: Socio) -> SocioOutput:
@@ -29,8 +28,10 @@ def _socio_to_output(socio: Socio) -> SocioOutput:
 
 # ── Endpoints de socios ───────────────────────────────────────────
 
-@router.get('', response_model=list[SocioOutput], summary='Listar Socios')
-def get_socios(
+@router.get('', 
+            response_model=list[SocioOutput], 
+            summary='Listar Socios')
+def get_socios_ep(
     usuario: Usuario = Depends(get_usuario_actual),
     session: Session = Depends(get_session)
 ):
@@ -38,9 +39,11 @@ def get_socios(
     socios = get_socios_usuario(usuario, session)
     return [_socio_to_output(s) for s in socios]
 
-
-@router.post('', response_model=SocioOutput, status_code=status.HTTP_201_CREATED, summary='Crear Socio' )
-def post_socio(
+@router.post('', 
+             response_model=SocioOutput, 
+             status_code=status.HTTP_201_CREATED, 
+             summary='Crear Socio' )
+def post_socio_ep(
     datos: SocioCreate,
     usuario: Usuario = Depends(get_usuario_actual),
     session: Session = Depends(get_session)
@@ -55,9 +58,10 @@ def post_socio(
     session.refresh(socio)
     return _socio_to_output(socio)
 
-
-@router.get('/{socio_id}', response_model=SocioOutput, summary='Obtener Socio')
-def get_socio(
+@router.get('/{socio_id}', 
+            response_model=SocioOutput, 
+            summary='Obtener Socio')
+def get_socio_ep(
     socio_id: str,
     usuario: Usuario = Depends(get_usuario_actual),
     session: Session = Depends(get_session)
@@ -68,9 +72,10 @@ def get_socio(
         raise HTTPException(status_code=404, detail="Socio no encontrado o sin acceso")
     return _socio_to_output(socio)
 
-
-@router.put('/{socio_id}', response_model=SocioOutput, summary='Editar Socio')
-def put_socio(
+@router.put('/{socio_id}', 
+            response_model=SocioOutput, 
+            summary='Editar Socio')
+def put_socio_ep(
     socio_id: str,
     datos: SocioUpdate,
     usuario: Usuario = Depends(get_usuario_actual),
@@ -88,9 +93,10 @@ def put_socio(
     session.refresh(socio)
     return _socio_to_output(socio)
 
-
-@router.patch('/{socio_id}', response_model=SocioOutput, summary='Baja Socio')
-def patch_socio(
+@router.patch('/{socio_id}', 
+              response_model=SocioOutput, 
+              summary='Baja Socio')
+def patch_socio_ep(
     socio_id: str,
     usuario: Usuario = Depends(get_usuario_actual),
     session: Session = Depends(get_session)
@@ -111,11 +117,11 @@ def patch_socio(
     session.refresh(socio)
     return _socio_to_output(socio)
 
-
 # ── Endpoints de permisos ─────────────────────────────────────────
 
-@router.get('/{socio_id}/permisos', summary='Listar Permisos de Socio')
-def get_permisos_socio(
+@router.get('/{socio_id}/permisos', 
+            summary='Listar Permisos de Socio')
+def get_permisos_socio_ep(
     socio_id: str,
     usuario: Usuario = Depends(get_usuario_actual),
     session: Session = Depends(get_session)
@@ -132,9 +138,10 @@ def get_permisos_socio(
     ).all()
     return [{"usuario_id": str(p.usuario_id)} for p in permisos]
 
-
-@router.post('/{socio_id}/permisos/{usuario_id}', status_code=status.HTTP_201_CREATED, summary='Asignar Permiso')
-def post_permiso_socio(
+@router.post('/{socio_id}/permisos/{usuario_id}', 
+             status_code=status.HTTP_201_CREATED, 
+             summary='Asignar Permiso')
+def post_permiso_socio_ep(
     socio_id: str,
     usuario_id: str,
     usuario: Usuario = Depends(get_usuario_actual),
@@ -164,9 +171,9 @@ def post_permiso_socio(
     session.commit()
     return {"mensaje": "Permiso asignado correctamente"}
 
-
-@router.patch('/{socio_id}/permisos/{usuario_id}', summary='Revocar Permiso')
-def patch_permiso_socio(
+@router.patch('/{socio_id}/permisos/{usuario_id}', 
+              summary='Revocar Permiso')
+def patch_permiso_socio_ep(
     socio_id: str,
     usuario_id: str,
     usuario: Usuario = Depends(get_usuario_actual),

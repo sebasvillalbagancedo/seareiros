@@ -1,14 +1,12 @@
 <template>
   <div class="modal-overlay" @click.self="$emit('cerrar')">
     <div class="modal">
-
       <div class="modal-header">
         <h3>Permisos — {{ socio.nombre }} {{ socio.apellidos }}</h3>
         <button class="btn-cerrar" @click="$emit('cerrar')">✕</button>
       </div>
 
       <div class="modal-body">
-
         <p v-if="cargando" class="mensaje">Cargando usuarios...</p>
         <p v-if="error" class="error">{{ error }}</p>
 
@@ -63,106 +61,106 @@
         </p>
 
         <p v-if="mensajeExito" class="exito">{{ mensajeExito }}</p>
-
       </div>
 
       <div class="modal-footer">
         <button class="btn-secundario" @click="$emit('cerrar')">Cerrar</button>
       </div>
-
     </div>
   </div>
 </template>
 
 <script>
-import { useSociosStore } from '@/stores/socios'
-import { useUsuariosStore } from '@/stores/usuarios'
+  import { useSociosStore } from '@/stores/socios'
+  import { useUsuariosStore } from '@/stores/usuarios'
 
-export default {
-  name: 'PermisosModal',
-  emits: ['cerrar'],
+  export default {
+    name: 'PermisosModal',
+    emits: ['cerrar'],
 
-  props: {
-    socio:            { type: Object, required: true },
-    sociosConPermiso: { type: Array,  default: () => [] },
-  },
-
-  data() {
-    return {
-      usuarios:      [],
-      permisos:      [],   // ids de usuarios con permiso vigente sobre este socio
-      cargando:      false,
-      procesando:    null,
-      error:         null,
-      mensajeExito:  null,
-    }
-  },
-
-  computed: {
-    usuariosNormales() {
-      return useUsuariosStore().usuarios.filter(u => u.rol === 'normal')
+    props: {
+      socio: { type: Object, required: true },
+      sociosConPermiso: { type: Array, default: () => [] },
     },
-  },
 
-  async created() {
-    await this.cargarDatos()
-  },
-
-  methods: {
-    async cargarDatos() {
-      this.cargando = true
-      this.error    = null
-      try {
-        await useUsuariosStore().cargarUsuarios()  
-        await this.cargarPermisos()
-      } catch {
-        this.error = 'No se pudo cargar la lista de usuarios.'
-      } finally {
-        this.cargando = false
+    data() {
+      return {
+        usuarios: [],
+        permisos: [], // ids de usuarios con permiso vigente sobre este socio
+        cargando: false,
+        procesando: null,
+        error: null,
+        mensajeExito: null,
       }
     },
 
-    async cargarPermisos() {
-      await useSociosStore().cargarPermisos(this.socio.id)
-      this.permisos = useSociosStore().permisos.map(p => p.usuario_id)
+    computed: {
+      usuariosNormales() {
+        return useUsuariosStore().usuariosNormales
+      },
     },
 
-    tienePermiso(usuarioId) {
-      return this.permisos.includes(usuarioId)
+    async created() {
+      await this.cargarDatos()
     },
 
-    async asignar(usuario) {
-      this.procesando   = usuario.id
-      this.mensajeExito = null
-      try {
-        await useSociosStore().asignarPermiso(this.socio.id, usuario.id)
-        this.permisos.push(usuario.id)
-        this.mostrarExito(`Permiso asignado a ${usuario.nombre}.`)
-      } catch {
-        this.error = 'Error al asignar el permiso.'
-      } finally {
-        this.procesando = null
-      }
-    },
+    methods: {
+      async cargarDatos() {
+        this.cargando = true
+        this.error = null
+        try {
+          await useUsuariosStore().cargarUsuarios()
+          await this.cargarPermisos()
+        } catch {
+          this.error = 'No se pudo cargar la lista de usuarios.'
+        } finally {
+          this.cargando = false
+        }
+      },
 
-    async revocar(usuario) {
-      this.procesando   = usuario.id
-      this.mensajeExito = null
-      try {
-        await useSociosStore().revocarPermiso(this.socio.id, usuario.id)
-        this.permisos = this.permisos.filter(id => id !== usuario.id)
-        this.mostrarExito(`Permiso revocado a ${usuario.nombre}.`)
-      } catch {
-        this.error = 'Error al revocar el permiso.'
-      } finally {
-        this.procesando = null
-      }
-    },
+      async cargarPermisos() {
+        await useSociosStore().cargarPermisos(this.socio.id)
+        this.permisos = useSociosStore().permisos.map((p) => p.usuario_id)
+      },
 
-    mostrarExito(msg) {
-      this.mensajeExito = msg
-      setTimeout(() => { this.mensajeExito = null }, 3000)
-    }
+      tienePermiso(usuarioId) {
+        return this.permisos.includes(usuarioId)
+      },
+
+      async asignar(usuario) {
+        this.procesando = usuario.id
+        this.mensajeExito = null
+        try {
+          await useSociosStore().asignarPermiso(this.socio.id, usuario.id)
+          this.permisos.push(usuario.id)
+          this.mostrarExito(`Permiso asignado a ${usuario.nombre}.`)
+        } catch {
+          this.error = 'Error al asignar el permiso.'
+        } finally {
+          this.procesando = null
+        }
+      },
+
+      async revocar(usuario) {
+        this.procesando = usuario.id
+        this.mensajeExito = null
+        try {
+          await useSociosStore().revocarPermiso(this.socio.id, usuario.id)
+          this.permisos = this.permisos.filter((id) => id !== usuario.id)
+          this.mostrarExito(`Permiso revocado a ${usuario.nombre}.`)
+        } catch {
+          this.error = 'Error al revocar el permiso.'
+        } finally {
+          this.procesando = null
+        }
+      },
+
+      mostrarExito(msg) {
+        this.mensajeExito = msg
+        setTimeout(() => {
+          this.mensajeExito = null
+        }, 3000)
+      },
+    },
   }
-}
 </script>

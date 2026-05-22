@@ -54,5 +54,13 @@ export const useSociosStore = defineStore('socios', () => {
     await api.patch(`/socios/${socioId}/permisos/${usuarioId}`)
   }
 
-  return { socios, permisos, cargando, error, cargar, crear, editar, darBaja, cargarPermisos, asignarPermiso, revocarPermiso }
+  function limpiar() {
+    socios.value   = []
+    permisos.value = []
+    error.value    = null
+  }
+
+  return { socios, permisos, cargando, error, 
+    cargar, crear, editar, darBaja, cargarPermisos, asignarPermiso, 
+    revocarPermiso, limpiar }
 })
