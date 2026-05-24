@@ -4,14 +4,14 @@
  */
 
 export function formatFecha(iso) {
-    if (!iso) return '—'
-    return new Date(iso).toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    })
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 /**
@@ -21,6 +21,7 @@ export function formatFecha(iso) {
 export function formatHora(iso) {
   if (!iso) return ''
   return new Date(iso).toLocaleTimeString('es-ES', {
-    hour: '2-digit', minute: '2-digit'
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }

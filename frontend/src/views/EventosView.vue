@@ -1,8 +1,8 @@
 <template>
   <div class="modulo-view">
     <div class="modulo-header">
-      <h2>Sorteos</h2>
-      <button v-if="esAdmin" class="btn-primario" @click="abrirModalCrear">+ Nuevo sorteo</button>
+      <h2>Eventos</h2>
+      <button v-if="esAdmin" class="btn-primario" @click="abrirModalCrear">+ Nuevo evento</button>
     </div>
 
     <!-- Tabs disponibles / histórico -->
@@ -34,7 +34,7 @@
       <select v-model="filtroEstadoDisp" class="select-filtro">
         <option value="">Todos los estados</option>
         <option value="abierto">Abierto</option>
-        <option value="pendiente">Pendiente</option>
+        <option value="completo">Completo</option>
         <option value="cancelado">Cancelado</option>
       </select>
     </div>
@@ -49,8 +49,7 @@
       />
       <select v-model="filtroEstadoHist" class="select-filtro">
         <option value="">Todos los estados</option>
-        <option value="pendiente">Pendiente</option>
-        <option value="resuelto">Resuelto</option>
+        <option value="celebrado">Celebrado</option>
         <option value="cancelado">Cancelado</option>
       </select>
       <input v-model="filtroDesde" type="date" class="input-fecha" />
@@ -58,124 +57,105 @@
       <button class="btn-secundario" @click="limpiarFiltrosHistorico">Limpiar filtros</button>
     </div>
 
-    <p v-if="store.cargando" class="mensaje">Cargando sorteos...</p>
+    <p v-if="store.cargando" class="mensaje">Cargando eventos...</p>
     <p v-if="store.error" class="error">{{ store.error }}</p>
 
-    <div v-if="!store.cargando && sorteosMostrados.length" class="tabla-wrapper">
+    <div v-if="!store.cargando && eventosMostrados.length" class="tabla-wrapper">
       <table>
         <thead>
           <tr>
             <th>Nombre</th>
+            <th>Lugar</th>
             <th>Celebración</th>
+            <th>Plazas</th>
             <th>Inscritos</th>
-            <th>Premios</th>
             <th>Estado</th>
             <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="s in sorteosMostrados" :key="s.id">
-            <td>{{ s.nombre }}</td>
-            <td>{{ formatFecha(s.fecha_celebracion) }}</td>
+          <tr v-for="e in eventosMostrados" :key="e.id">
+            <td>{{ e.nombre }}</td>
+            <td>{{ e.lugar || '—' }}</td>
+            <td>{{ formatFecha(e.fecha_celebracion) }}</td>
+            <td>{{ e.plazas_disponibles }}</td>
+            <td>{{ e.inscritos }}</td>
             <td>
-              {{ s.inscritos }}
-              <span v-if="s.maximo_inscritos !== null" class="texto-limite">
-                / {{ s.maximo_inscritos }}
-              </span>
-            </td>
-            <td>{{ s.numero_premios }}</td>
-            <td>
-              <span class="badge" :class="claseBadge(s.estado)">
-                {{ etiquetaEstado(s.estado) }}
+              <span class="badge" :class="claseBadge(e.estado)">
+                {{ etiquetaEstado(e.estado) }}
               </span>
             </td>
             <td class="acciones">
-              <button class="btn-accion" @click="abrirInscripciones(s)">
-                {{ s.estado === 'resuelto' ? 'Resultados' : 'Inscripciones' }}
-              </button>
-              <button
-                v-if="esAdmin && s.estado === 'abierto'"
-                class="btn-accion"
-                @click="abrirModalEditar(s)"
-              >
-                Editar
-              </button>
-              <button
-                v-if="esAdmin && ['abierto', 'pendiente'].includes(s.estado)"
-                class="btn-accion"
-                @click="abrirModalResolver(s)"
-              >
-                Resolver
-              </button>
-              <button
-                v-if="esAdmin && !['resuelto', 'cancelado'].includes(s.estado)"
-                class="btn-accion btn-baja"
-                @click="abrirModalCancelar(s)"
-              >
-                Cancelar
-              </button>
+              <button class="btn-accion" @click="abrirInscripciones(e)">Inscripciones</button>
+              <template v-if="vistaActiva === 'disponibles' && esAdmin">
+                <button
+                  v-if="e.estado === 'abierto'"
+                  class="btn-accion"
+                  @click="abrirModalEditar(e)"
+                >
+                  Editar
+                </button>
+                <button
+                  v-if="!['cancelado', 'celebrado'].includes(e.estado)"
+                  class="btn-accion btn-baja"
+                  @click="abrirModalCancelar(e)"
+                >
+                  Cancelar
+                </button>
+              </template>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <p v-if="!store.cargando && !sorteosMostrados.length && !store.error" class="mensaje">
-      No hay sorteos que coincidan con los filtros aplicados.
+    <p v-if="!store.cargando && !eventosMostrados.length && !store.error" class="mensaje">
+      No hay eventos que coincidan con los filtros aplicados.
     </p>
 
     <p v-if="mensajeExito" class="exito">{{ mensajeExito }}</p>
 
     <!-- Modal alta / edición -->
-    <SorteoFormModal
+    <EventoFormModal
       v-if="modalVisible"
       :modo="modalModo"
-      :sorteo="sorteoSeleccionado"
+      :evento="eventoSeleccionado"
       @cerrar="cerrarModal"
       @guardado="handleGuardado"
     />
 
     <!-- Modal inscripciones -->
-    <SorteoInscripcionesModal
+    <EventoInscripcionesModal
       v-if="inscripcionesVisible"
-      :sorteo="sorteoSeleccionado"
+      :evento="eventoSeleccionado"
+      :solo-consulta="vistaActiva === 'historico'"
       @cerrar="inscripcionesVisible = false"
     />
 
     <!-- Modal cancelar -->
-    <SorteoCancelarModal
+    <EventoCancelarModal
       v-if="cancelarVisible"
-      :sorteo="sorteoSeleccionado"
+      :evento="eventoSeleccionado"
       @cerrar="cancelarVisible = false"
       @cancelado="onCancelado"
-    />
-
-    <!-- Modal resolver -->
-    <SorteoResolverModal
-      v-if="resolverVisible"
-      :sorteo="sorteoSeleccionado"
-      @cerrar="resolverVisible = false"
-      @resuelto="onResuelto"
     />
   </div>
 </template>
 
 <script>
-  import { useSorteosStore } from '@/stores/sorteos'
+  import { useEventosStore } from '@/stores/eventos'
   import { useUsuariosStore } from '@/stores/usuarios'
   import { formatFecha } from '@/utils/fecha'
-  import SorteoFormModal from '@/components/SorteoFormModal.vue'
-  import SorteoInscripcionesModal from '@/components/SorteoInscripcionesModal.vue'
-  import SorteoCancelarModal from '@/components/SorteoCancelarModal.vue'
-  import SorteoResolverModal from '@/components/SorteoResolverModal.vue'
+  import EventoFormModal from '@/components/EventoFormModal.vue'
+  import EventoInscripcionesModal from '@/components/EventoInscripcionesModal.vue'
+  import EventoCancelarModal from '@/components/EventoCancelarModal.vue'
 
   export default {
-    name: 'SorteosView',
+    name: 'EventosView',
     components: {
-      SorteoFormModal,
-      SorteoInscripcionesModal,
-      SorteoCancelarModal,
-      SorteoResolverModal,
+      EventoFormModal,
+      EventoInscripcionesModal,
+      EventoCancelarModal,
     },
 
     data() {
@@ -189,27 +169,27 @@
         filtroEstadoHist: '',
         filtroDesde: '',
         filtroHasta: '',
+        // Modales
         modalVisible: false,
         modalModo: 'crear',
-        sorteoSeleccionado: null,
+        eventoSeleccionado: null,
         inscripcionesVisible: false,
         cancelarVisible: false,
-        resolverVisible: false,
         mensajeExito: null,
       }
     },
 
     computed: {
       store() {
-        return useSorteosStore()
+        return useEventosStore()
       },
       esAdmin() {
         return useUsuariosStore().usuario?.rol === 'administrador'
       },
-      sorteosMostrados() {
-        const lista = this.vistaActiva === 'disponibles' ? this.store.sorteos : this.store.historico
+      eventosMostrados() {
+        const lista = this.vistaActiva === 'disponibles' ? this.store.eventos : this.store.historico
 
-        return lista.filter((s) => {
+        return lista.filter((e) => {
           const busqueda =
             this.vistaActiva === 'disponibles'
               ? this.textoBusquedaDisp.toLowerCase()
@@ -217,13 +197,13 @@
           const estado =
             this.vistaActiva === 'disponibles' ? this.filtroEstadoDisp : this.filtroEstadoHist
 
-          const coincideTexto = !busqueda || s.nombre.toLowerCase().includes(busqueda)
-          const coincideEstado = !estado || s.estado === estado
+          const coincideTexto = !busqueda || e.nombre.toLowerCase().includes(busqueda)
+          const coincideEstado = !estado || e.estado === estado
           const coincideFecha =
             this.vistaActiva === 'disponibles'
               ? true
-              : (!this.filtroDesde || s.fecha_celebracion >= this.filtroDesde) &&
-                (!this.filtroHasta || s.fecha_celebracion <= this.filtroHasta + 'T23:59:59')
+              : (!this.filtroDesde || e.fecha_celebracion >= this.filtroDesde) &&
+                (!this.filtroHasta || e.fecha_celebracion <= this.filtroHasta + 'T23:59:59')
 
           return coincideTexto && coincideEstado && coincideFecha
         })
@@ -231,7 +211,7 @@
     },
 
     async created() {
-      await useSorteosStore().cargar()
+      await useEventosStore().cargar()
     },
 
     methods: {
@@ -256,8 +236,8 @@
       claseBadge(estado) {
         const mapa = {
           abierto: 'badge-activo',
-          pendiente: 'badge-pendiente',
-          resuelto: 'badge-resuelto',
+          completo: 'badge-pendiente',
+          celebrado: 'badge-resuelto',
           cancelado: 'badge-baja',
         }
         return mapa[estado] || ''
@@ -266,46 +246,40 @@
       etiquetaEstado(estado) {
         const mapa = {
           abierto: 'Abierto',
-          pendiente: 'Pendiente',
-          resuelto: 'Resuelto',
+          completo: 'Completo',
+          celebrado: 'Celebrado',
           cancelado: 'Cancelado',
         }
         return mapa[estado] || estado
       },
 
       abrirModalCrear() {
-        this.sorteoSeleccionado = null
+        this.eventoSeleccionado = null
         this.modalModo = 'crear'
         this.modalVisible = true
       },
 
-      abrirModalEditar(sorteo) {
-        this.sorteoSeleccionado = sorteo
+      abrirModalEditar(evento) {
+        this.eventoSeleccionado = evento
         this.modalModo = 'editar'
         this.modalVisible = true
       },
 
       cerrarModal() {
         this.modalVisible = false
-        this.sorteoSeleccionado = null
+        this.eventoSeleccionado = null
       },
 
-      abrirInscripciones(sorteo) {
-        this.sorteoSeleccionado = sorteo
+      abrirInscripciones(evento) {
+        this.eventoSeleccionado = evento
         this.inscripcionesVisible = true
       },
 
-      abrirModalCancelar(sorteo) {
-        this.sorteoSeleccionado = sorteo
+      abrirModalCancelar(evento) {
+        this.eventoSeleccionado = evento
         this.cancelarVisible = true
       },
 
-      abrirModalResolver(sorteo) {
-        this.sorteoSeleccionado = sorteo
-        this.resolverVisible = true
-      },
-
-      // Helper para extraer el mensaje de error de la respuesta de FastAPI
       getMensajeError(e) {
         const detail = e.response?.data?.detail
         if (!detail) return 'Error inesperado. Inténtalo de nuevo.'
@@ -318,10 +292,10 @@
         try {
           if (this.modalModo === 'crear') {
             await this.store.crear(datos)
-            this.mostrarExito('Sorteo creado correctamente.')
+            this.mostrarExito('Evento creado correctamente.')
           } else {
-            await this.store.editar(this.sorteoSeleccionado.id, datos)
-            this.mostrarExito('Sorteo actualizado correctamente.')
+            await this.store.editar(this.eventoSeleccionado.id, datos)
+            this.mostrarExito('Evento actualizado correctamente.')
           }
           this.cerrarModal()
         } catch (e) {
@@ -331,12 +305,7 @@
 
       onCancelado() {
         this.cancelarVisible = false
-        this.mostrarExito('Sorteo cancelado correctamente.')
-      },
-
-      onResuelto() {
-        this.resolverVisible = false
-        this.mostrarExito('Sorteo resuelto correctamente.')
+        this.mostrarExito('Evento cancelado correctamente.')
       },
 
       mostrarExito(msg) {

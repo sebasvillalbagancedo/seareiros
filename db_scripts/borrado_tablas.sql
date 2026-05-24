@@ -6,6 +6,8 @@ delete from miembros_chats;
 delete from chats;
 delete from inscripciones_sorteos;
 delete from sorteos;
+delete from inscripciones_eventos;
+delete from eventos;
 delete from usuarios_socios;
 delete from socios;
 --delete from usuarios;

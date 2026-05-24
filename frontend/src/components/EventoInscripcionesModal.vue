@@ -2,16 +2,13 @@
   <div class="modal-overlay" @click.self="$emit('cerrar')">
     <div class="modal modal-wide">
       <div class="modal-header">
-        <h3>
-          {{ sorteo.estado === 'resuelto' ? 'Resultados' : 'Inscripciones' }} —
-          {{ sorteo.nombre }}
-        </h3>
+        <h3>Inscripciones — {{ evento.nombre }}</h3>
         <button class="btn-cerrar" @click="$emit('cerrar')">✕</button>
       </div>
 
       <div class="modal-body">
-        <!-- Inscribir socio (solo si el sorteo está abierto) -->
-        <div v-if="sorteoAbierto" class="seccion-inscribir">
+        <!-- Inscribir socio (solo si el evento está abierto) -->
+        <div v-if="eventoAbierto" class="seccion-inscribir">
           <h4>Inscribir socio</h4>
           <div class="fila-campos">
             <div class="campo">
@@ -36,7 +33,7 @@
         <p v-if="cargando" class="mensaje">Cargando inscripciones...</p>
 
         <!-- Tabla de inscripciones -->
-        <div v-if="!cargando && inscripcionesActivas.length" class="tabla-wrapper">
+        <div v-if="!cargando && inscripcionesTodas.length" class="tabla-wrapper">
           <table>
             <thead>
               <tr>
@@ -44,33 +41,45 @@
                 <th>Nombre</th>
                 <th>Apellidos</th>
                 <th>Fecha inscripción</th>
-                <th>Ganador</th>
-                <th v-if="sorteoAbierto">Acción</th>
+                <th>Estado</th>
+                <th v-if="esAdmin && !soloConsulta">Acción</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="i in inscripcionesActivas" :key="i.id">
+              <tr v-for="i in inscripcionesTodas" :key="i.id">
                 <td>{{ i.socio_numero }}</td>
                 <td>{{ i.socio_nombre }}</td>
                 <td>{{ i.socio_apellidos }}</td>
                 <td>{{ formatFecha(i.fecha_inscripcion) }}</td>
                 <td>
-                  <span
-                    v-if="sorteo.estado === 'resuelto'"
-                    class="badge"
-                    :class="i.es_ganador ? 'badge-activo' : 'badge-baja'"
-                  >
-                    {{ i.es_ganador ? 'Sí' : 'No' }}
+                  <span class="badge" :class="claseBadgeInscripcion(i.estado)">
+                    {{ etiquetaEstadoInscripcion(i.estado) }}
                   </span>
-                  <span v-else>—</span>
                 </td>
-                <td v-if="sorteoAbierto">
+                <td v-if="esAdmin && !soloConsulta">
                   <button
-                    class="btn-accion btn-baja"
-                    :disabled="cancelando === i.id"
-                    @click="cancelarInscripcion(i)"
+                    v-if="i.estado === 'pendiente'"
+                    class="btn-accion"
+                    :disabled="gestionando === i.id"
+                    @click="gestionar(i, 'confirmada')"
                   >
-                    {{ cancelando === i.id ? '...' : 'Cancelar' }}
+                    {{ gestionando === i.id ? '...' : 'Confirmar' }}
+                  </button>
+                  <button
+                    v-if="i.estado === 'pendiente'"
+                    class="btn-accion btn-baja"
+                    :disabled="gestionando === i.id"
+                    @click="gestionar(i, 'rechazada')"
+                  >
+                    {{ gestionando === i.id ? '...' : 'Rechazar' }}
+                  </button>
+                  <button
+                    v-if="i.estado === 'confirmada'"
+                    class="btn-accion btn-baja"
+                    :disabled="gestionando === i.id"
+                    @click="gestionar(i, 'cancelada')"
+                  >
+                    {{ gestionando === i.id ? '...' : 'Cancelar' }}
                   </button>
                 </td>
               </tr>
@@ -78,8 +87,8 @@
           </table>
         </div>
 
-        <p v-if="!cargando && !inscripcionesActivas.length" class="mensaje">
-          No hay inscripciones activas en este sorteo.
+        <p v-if="!cargando && !inscripcionesTodas.length" class="mensaje">
+          No hay inscripciones activas en este evento.
         </p>
 
         <p v-if="mensajeExito" class="exito">{{ mensajeExito }}</p>
@@ -93,23 +102,25 @@
 </template>
 
 <script>
-  import { useSorteosStore } from '@/stores/sorteos'
+  import { useEventosStore } from '@/stores/eventos'
   import { useSociosStore } from '@/stores/socios'
+  import { useUsuariosStore } from '@/stores/usuarios'
   import { formatFecha } from '@/utils/fecha'
 
   export default {
-    name: 'InscripcionesModal',
+    name: 'EventoInscripcionesModal',
     emits: ['cerrar'],
 
     props: {
-      sorteo: { type: Object, required: true },
+      evento: { type: Object, required: true },
+      soloConsulta: { type: Boolean, default: false },
     },
 
     data() {
       return {
         socioSeleccionado: '',
         inscribiendo: false,
-        cancelando: null,
+        gestionando: null,
         cargando: false,
         errorInscripcion: null,
         mensajeExito: null,
@@ -117,17 +128,20 @@
     },
 
     computed: {
-      sorteoAbierto() {
-        return this.sorteo.estado === 'abierto'
+      esAdmin() {
+        return useUsuariosStore().usuario?.rol === 'administrador'
       },
 
-      inscripcionesActivas() {
-        return useSorteosStore().inscripcionesActivas
+      eventoAbierto() {
+        return !this.soloConsulta && this.evento.estado === 'abierto'
       },
 
-      // Socios disponibles: activos y no ya inscritos
+      inscripcionesTodas() {
+        return useEventosStore().inscripcionesTodas
+      },
+
       sociosDisponibles() {
-        const idsInscritos = useSorteosStore().idsSociosInscritos
+        const idsInscritos = useEventosStore().idsSociosInscritos
         return useSociosStore().socios.filter(
           (s) => s.estado === 'activo' && !idsInscritos.includes(s.id),
         )
@@ -136,18 +150,41 @@
 
     async created() {
       this.cargando = true
-      await useSorteosStore().cargarInscripciones(this.sorteo.id)
+      await Promise.all([
+        useEventosStore().cargarInscripciones(this.evento.id),
+        useSociosStore().socios.length === 0 ? useSociosStore().cargar() : Promise.resolve(),
+      ])
       this.cargando = false
     },
 
     methods: {
       formatFecha,
 
+      claseBadgeInscripcion(estado) {
+        const mapa = {
+          pendiente: 'badge-pendiente',
+          confirmada: 'badge-activo',
+          rechazada: 'badge-baja',
+          cancelada: 'badge-baja',
+        }
+        return mapa[estado] || ''
+      },
+
+      etiquetaEstadoInscripcion(estado) {
+        const mapa = {
+          pendiente: 'Pendiente',
+          confirmada: 'Confirmada',
+          rechazada: 'Rechazada',
+          cancelada: 'Cancelada',
+        }
+        return mapa[estado] || estado
+      },
+
       async inscribir() {
         this.errorInscripcion = null
         this.inscribiendo = true
         try {
-          await useSorteosStore().inscribir(this.sorteo.id, this.socioSeleccionado)
+          await useEventosStore().inscribir(this.evento.id, this.socioSeleccionado)
           this.socioSeleccionado = ''
           this.mostrarExito('Socio inscrito correctamente.')
         } catch (e) {
@@ -157,15 +194,15 @@
         }
       },
 
-      async cancelarInscripcion(inscripcion) {
-        this.cancelando = inscripcion.id
+      async gestionar(inscripcion, nuevoEstado) {
+        this.gestionando = inscripcion.id
         try {
-          await useSorteosStore().cancelarInscripcion(this.sorteo.id, inscripcion.id)
-          this.mostrarExito('Inscripción cancelada correctamente.')
-        } catch {
-          this.errorInscripcion = 'Error al cancelar la inscripción.'
+          await useEventosStore().gestionarInscripcion(this.evento.id, inscripcion.id, nuevoEstado)
+          this.mostrarExito('Inscripción actualizada correctamente.')
+        } catch (e) {
+          this.errorInscripcion = e.response?.data?.detail || 'Error al gestionar la inscripción.'
         } finally {
-          this.cancelando = null
+          this.gestionando = null
         }
       },
 

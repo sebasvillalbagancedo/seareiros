@@ -7,7 +7,7 @@ import { useSorteosStore } from '@/stores/sorteos'
 import { useChatStore } from '@/stores/chat'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token   = ref(localStorage.getItem('token') || null)
+  const token = ref(localStorage.getItem('token') || null)
 
   const estaAutenticado = () => !!token.value
 
@@ -22,7 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function logout() {
-    token.value   = null
+    token.value = null
     localStorage.removeItem('token')
     useUsuariosStore().limpiar()
     useSociosStore().limpiar()

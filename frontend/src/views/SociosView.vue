@@ -5,7 +5,7 @@
       <button v-if="esAdmin" class="btn-primario" @click="abrirModalCrear">+ Nuevo socio</button>
     </div>
 
-    <!-- Búsqueda y filtrado — RF.0204 -->
+    <!-- Búsqueda y filtrado -->
     <div class="barra-filtros">
       <input
         v-model="textoBusqueda"

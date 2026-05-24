@@ -2,25 +2,27 @@ from pydantic import BaseModel, model_validator, field_validator
 from typing import Optional
 from datetime import date, datetime
 
+ESTADOS_INSCRIPCION = {"pendiente", "confirmada", "rechazada", "cancelada"}
 
-# ── Sorteo ──────────────────────────────────────────────
-class SorteoCreate(BaseModel):
+
+# ── Evento ──────────────────────────────────────────────
+class EventoCreate(BaseModel):
     nombre: str
     descripcion: Optional[str] = None
+    lugar: Optional[str] = None
+    fecha_celebracion: datetime
     fecha_inicio_inscripcion: datetime
     fecha_fin_inscripcion: datetime
-    fecha_celebracion: datetime
-    numero_premios: int = 1
-    maximo_inscritos: Optional[int] = None
+    plazas_disponibles: int
     fecha_nacimiento_maxima: Optional[date] = None
     fecha_nacimiento_minima: Optional[date] = None
     fecha_alta_maxima: Optional[date] = None
 
-    @field_validator("numero_premios")
+    @field_validator("plazas_disponibles")
     @classmethod
-    def premios_positivos(cls, v: int) -> int:
+    def plazas_positivas(cls, v: int) -> int:
         if v <= 0:
-            raise ValueError("El número de premios debe ser mayor que cero")
+            raise ValueError("El número de plazas disponibles debe ser mayor que cero")
         return v
 
     @model_validator(mode="after")
@@ -33,38 +35,31 @@ class SorteoCreate(BaseModel):
             raise ValueError(
                 "La fecha de celebración debe ser posterior al cierre de inscripción"
             )
-        if self.maximo_inscritos is not None:
-            if self.maximo_inscritos < 1:
-                raise ValueError("El máximo de inscritos debe ser mayor que cero")
-            if self.numero_premios > self.maximo_inscritos:
-                raise ValueError(
-                    "El número de premios no puede superar el máximo de inscritos"
-                )
         return self
 
 
-class SorteoUpdate(BaseModel):
+class EventoUpdate(BaseModel):
     nombre: Optional[str] = None
     descripcion: Optional[str] = None
+    lugar: Optional[str] = None
+    fecha_celebracion: Optional[datetime] = None
     fecha_inicio_inscripcion: Optional[datetime] = None
     fecha_fin_inscripcion: Optional[datetime] = None
-    fecha_celebracion: Optional[datetime] = None
-    numero_premios: Optional[int] = None
-    maximo_inscritos: Optional[int] = None
+    plazas_disponibles: Optional[int] = None
     fecha_nacimiento_maxima: Optional[date] = None
     fecha_nacimiento_minima: Optional[date] = None
     fecha_alta_maxima: Optional[date] = None
 
 
-class SorteoOutput(BaseModel):
+class EventoOutput(BaseModel):
     id: str
     nombre: str
     descripcion: Optional[str] = None
+    lugar: Optional[str]
+    fecha_celebracion: datetime
     fecha_inicio_inscripcion: datetime
     fecha_fin_inscripcion: datetime
-    fecha_celebracion: datetime
-    numero_premios: int
-    maximo_inscritos: Optional[int] = None
+    plazas_disponibles: int
     fecha_nacimiento_maxima: Optional[date] = None
     fecha_nacimiento_minima: Optional[date] = None
     fecha_alta_maxima: Optional[date] = None
@@ -77,7 +72,7 @@ class SorteoOutput(BaseModel):
     inscritos: int = 0
 
 
-class SorteoCancelarInput(BaseModel):
+class EventoCancelarInput(BaseModel):
     motivo_cancelacion: str
 
 
@@ -86,16 +81,26 @@ class InscripcionCreate(BaseModel):
     socio_id: str
 
 
+class InscripcionGestion(BaseModel):
+    estado: str
+
+    @field_validator("estado")
+    @classmethod
+    def estado_valido(cls, v: str) -> str:
+        if v not in ESTADOS_INSCRIPCION:
+            raise ValueError(f"Estado debe ser uno de {ESTADOS_INSCRIPCION}")
+        return v
+
+
 class InscripcionOutput(BaseModel):
     id: str
-    sorteo_id: str
+    evento_id: str
     socio_id: str
     usuario_inscripcion: str
     fecha_inscripcion: datetime
-    es_ganador: bool
     estado: str
-    fecha_cancelacion: Optional[datetime] = None
-    usuario_cancelacion: Optional[str] = None
+    fecha_gestion: Optional[datetime] = None
+    usuario_gestion: Optional[str] = None
 
     # Datos del socio para mostrar en el listado
     socio_nombre: Optional[str] = None

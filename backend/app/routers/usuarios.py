@@ -6,28 +6,25 @@ from app.dependencies import oauth2_scheme
 from app.services.auth import decode_token
 from app.models.usuario import Usuario
 
-router = APIRouter(prefix='/usuarios', tags=['Usuarios'])
+router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
-@router.get('/me', 
-            response_model=UsuarioOutput, 
-            summary='Obtener Usuario Autenticado')
+
+@router.get("/me", response_model=UsuarioOutput, summary="Obtener Usuario Autenticado")
 def get_usuario_me_ep(
-    token: str = Depends(oauth2_scheme),
-    session: Session = Depends(get_session)
+    token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)
 ):
     """Devuelve los datos del usuario autenticado a partir del token."""
     try:
         payload = decode_token(token)
-        user_id = payload.get('sub')
+        user_id = payload.get("sub")
     except Exception:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Token inválido o expirado'
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido o expirado"
         )
 
     usuario = session.get(Usuario, user_id)
     if not usuario:
-        raise HTTPException(status_code=404, detail='Usuario no encontrado o inactivo')
+        raise HTTPException(status_code=404, detail="Usuario no encontrado o inactivo")
 
     return UsuarioOutput(
         id=str(usuario.id),
@@ -36,26 +33,23 @@ def get_usuario_me_ep(
         nombre=usuario.nombre,
         apellidos=usuario.apellidos,
         rol=usuario.rol,
-        estado=usuario.estado
+        estado=usuario.estado,
     )
 
-@router.get('', 
-            response_model=list[UsuarioListOutput], 
-            summary='Listar Usuarios')
+
+@router.get("", response_model=list[UsuarioListOutput], summary="Listar Usuarios")
 def get_usuarios_ep(
-    token: str = Depends(oauth2_scheme),
-    session: Session = Depends(get_session)
+    token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)
 ):
     """
     Devuelve la lista de usuarios.
     """
     try:
         payload = decode_token(token)
-        user_id = payload.get('sub')
+        user_id = payload.get("sub")
     except Exception:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Token inválido o expirado'
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido o expirado"
         )
 
     usuarios = session.exec(select(Usuario)).all()
@@ -66,7 +60,7 @@ def get_usuarios_ep(
             nombre=u.nombre,
             apellidos=u.apellidos,
             rol=u.rol,
-            estado=u.estado
+            estado=u.estado,
         )
         for u in usuarios
         if u.id != user_id  # excluye al propio usuario

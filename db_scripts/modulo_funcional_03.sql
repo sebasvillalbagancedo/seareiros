@@ -14,14 +14,15 @@ CREATE TABLE sorteos (
     estado                     VARCHAR(20)  NOT NULL DEFAULT 'abierto'
                                             CHECK (estado IN (
                                                 'abierto',
-                                                'cerrado',
                                                 'pendiente',
                                                 'resuelto',
                                                 'cancelado'
                                             )),
-    motivo_cancelacion         TEXT,
     fecha_creacion             TIMESTAMP    NOT NULL DEFAULT NOW(),
-    usuario_creacion           UUID         NOT NULL REFERENCES usuarios(id)
+    usuario_creacion           UUID         NOT NULL REFERENCES usuarios(id),
+    motivo_cancelacion         TEXT,
+    fecha_cancelacion          TIMESTAMP ,
+    usuario_cancelacion        UUID         REFERENCES usuarios(id)
 );
 
 -- ── Tabla inscripciones_sorteos ────────────────────────────────

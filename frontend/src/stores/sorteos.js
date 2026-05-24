@@ -2,28 +2,42 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import api from '@/services/api'
 
-export const useSorteosStore  = defineStore('sorteos', () => {
-  const sorteos         = ref([])
-  const inscripciones   = ref([])
-  const cargando        = ref(false)
-  const error           = ref(null)
+export const useSorteosStore = defineStore('sorteos', () => {
+  const sorteos = ref([])
+  const historico = ref([])
+  const inscripciones = ref([])
+  const cargando = ref(false)
+  const error = ref(null)
+
+  const inscripcionesTodas = computed(() => inscripciones.value)
 
   const inscripcionesActivas = computed(() =>
-    inscripciones.value.filter(i => i.estado === 'activa')
+    inscripciones.value.filter((i) => i.estado === 'activa'),
   )
 
-  const idsSociosInscritos = computed(() =>
-    inscripcionesActivas.value.map(i => i.socio_id)
-  )
+  const idsSociosInscritos = computed(() => inscripcionesActivas.value.map((i) => i.socio_id))
 
   async function cargar() {
     cargando.value = true
-    error.value = null 
+    error.value = null
     try {
       const { data } = await api.get('/sorteos')
       sorteos.value = data
     } catch (err) {
-      error.value = err.response?.data?.message || 'Error al cargar sorteos'
+      error.value = err.response?.data?.detail || 'Error al cargar sorteos'
+    } finally {
+      cargando.value = false
+    }
+  }
+
+  async function cargarHistorico() {
+    cargando.value = true
+    error.value = null
+    try {
+      const { data } = await api.get('/sorteos/historico')
+      historico.value = data
+    } catch (err) {
+      error.value = err.response?.data?.detail || 'Error al cargar histórico de sorteos'
     } finally {
       cargando.value = false
     }
@@ -37,21 +51,21 @@ export const useSorteosStore  = defineStore('sorteos', () => {
 
   async function editar(id, datos) {
     const { data } = await api.put(`/sorteos/${id}`, datos)
-    const idx = sorteos.value.findIndex(s => s.id === id)
+    const idx = sorteos.value.findIndex((s) => s.id === id)
     if (idx !== -1) sorteos.value[idx] = data
     return data
   }
 
   async function cancelar(id, motivo_cancelacion) {
     const { data } = await api.patch(`/sorteos/${id}/cancelar`, { motivo_cancelacion })
-    const idx = sorteos.value.findIndex(s => s.id === id)
+    const idx = sorteos.value.findIndex((s) => s.id === id)
     if (idx !== -1) sorteos.value[idx] = data
     return data
   }
 
   async function resolver(id) {
     const { data } = await api.patch(`/sorteos/${id}/resolver`)
-    const idx = sorteos.value.findIndex(s => s.id === id)
+    const idx = sorteos.value.findIndex((s) => s.id === id)
     if (idx !== -1) sorteos.value[idx] = data
     return data
   }
@@ -65,27 +79,46 @@ export const useSorteosStore  = defineStore('sorteos', () => {
     const { data } = await api.post(`/sorteos/${sorteoId}/inscripciones`, { socio_id: socioId })
     inscripciones.value.push(data)
     // Actualizar contador de inscritos en el sorteo
-    const idx = sorteos.value.findIndex(s => s.id === sorteoId)
+    const idx = sorteos.value.findIndex((s) => s.id === sorteoId)
     if (idx !== -1) sorteos.value[idx].inscritos++
     return data
   }
 
   async function cancelarInscripcion(sorteoId, inscripcionId) {
     const { data } = await api.patch(`/sorteos/${sorteoId}/inscripciones/${inscripcionId}`)
-    const idx = inscripciones.value.findIndex(i => i.id === inscripcionId)
+    const idx = inscripciones.value.findIndex((i) => i.id === inscripcionId)
     if (idx !== -1) inscripciones.value[idx] = data
     // Actualizar contador de inscritos en el sorteo
-    const idxSorteo = sorteos.value.findIndex(s => s.id === sorteoId)
+    const idxSorteo = sorteos.value.findIndex((s) => s.id === sorteoId)
     if (idxSorteo !== -1) sorteos.value[idxSorteo].inscritos--
     return data
   }
 
   function limpiar() {
-    sorteos.value       = []
+    sorteos.value = []
+    historico.value = []
     inscripciones.value = []
-    error.value         = null
+    error.value = null
   }
 
-  return { sorteos, inscripciones, cargando, error, inscripcionesActivas, idsSociosInscritos, 
-            cargar, crear, editar, cancelar , resolver, cargarInscripciones, inscribir, cancelarInscripcion, limpiar }
+  return {
+    sorteos,
+    historico,
+    inscripciones,
+    cargando,
+    error,
+    inscripcionesTodas,
+    inscripcionesActivas,
+    idsSociosInscritos,
+    cargar,
+    cargarHistorico,
+    crear,
+    editar,
+    cancelar,
+    resolver,
+    cargarInscripciones,
+    inscribir,
+    cancelarInscripcion,
+    limpiar,
+  }
 })

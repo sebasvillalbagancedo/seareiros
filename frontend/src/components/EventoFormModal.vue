@@ -2,7 +2,7 @@
   <div class="modal-overlay" @click.self="$emit('cerrar')">
     <div class="modal modal-wide">
       <div class="modal-header">
-        <h3>{{ modo === 'crear' ? 'Nuevo sorteo' : 'Editar sorteo' }}</h3>
+        <h3>{{ modo === 'crear' ? 'Nuevo evento' : 'Editar evento' }}</h3>
         <p v-if="errorForm" class="error-header">{{ errorForm }}</p>
         <button class="btn-cerrar" @click="$emit('cerrar')">✕</button>
       </div>
@@ -11,12 +11,17 @@
         <div class="modal-body">
           <div class="campo">
             <label>Nombre *</label>
-            <input v-model="form.nombre" type="text" required placeholder="Nombre del sorteo" />
+            <input v-model="form.nombre" type="text" required placeholder="Nombre del evento" />
           </div>
 
           <div class="campo">
             <label>Descripción</label>
             <input v-model="form.descripcion" type="text" placeholder="Descripción opcional" />
+          </div>
+
+          <div class="campo">
+            <label>Lugar</label>
+            <input v-model="form.lugar" type="text" placeholder="Lugar de celebración" />
           </div>
 
           <div class="fila-campos">
@@ -32,26 +37,14 @@
               <label>Fecha celebración *</label>
               <input v-model="form.fecha_celebracion" type="datetime-local" required />
             </div>
-          </div>
-
-          <div class="fila-campos">
             <div class="campo campo-cp">
-              <label>Número de premios *</label>
+              <label>Plazas *</label>
               <input
-                v-model.number="form.numero_premios"
+                v-model.number="form.plazas_disponibles"
                 type="number"
                 min="1"
                 required
                 placeholder="1"
-              />
-            </div>
-            <div class="campo campo-cp">
-              <label>Máximo de inscritos</label>
-              <input
-                v-model.number="form.maximo_inscritos"
-                type="number"
-                min="1"
-                placeholder="Sin límite"
               />
             </div>
           </div>
@@ -89,12 +82,12 @@
 
 <script>
   export default {
-    name: 'SorteoFormModal',
+    name: 'EventoFormModal',
     emits: ['cerrar', 'guardado'],
 
     props: {
       modo: { type: String, default: 'crear' },
-      sorteo: { type: Object, default: null },
+      evento: { type: Object, default: null },
     },
 
     data() {
@@ -102,11 +95,11 @@
         form: {
           nombre: '',
           descripcion: '',
+          lugar: '',
           fecha_inicio_inscripcion: '',
           fecha_fin_inscripcion: '',
           fecha_celebracion: '',
-          numero_premios: 1,
-          maximo_inscritos: null,
+          plazas_disponibles: 1,
           fecha_nacimiento_maxima: '',
           fecha_nacimiento_minima: '',
           fecha_alta_maxima: '',
@@ -118,18 +111,18 @@
     },
 
     created() {
-      if (this.modo === 'editar' && this.sorteo) {
+      if (this.modo === 'editar' && this.evento) {
         this.form = {
-          nombre: this.sorteo.nombre || '',
-          descripcion: this.sorteo.descripcion || '',
-          fecha_inicio_inscripcion: this.toDatetimeLocal(this.sorteo.fecha_inicio_inscripcion),
-          fecha_fin_inscripcion: this.toDatetimeLocal(this.sorteo.fecha_fin_inscripcion),
-          fecha_celebracion: this.toDatetimeLocal(this.sorteo.fecha_celebracion),
-          maximo_inscritos: this.sorteo.maximo_inscritos || null,
-          numero_premios: this.sorteo.numero_premios || 1,
-          fecha_nacimiento_maxima: this.sorteo.fecha_nacimiento_maxima || '',
-          fecha_nacimiento_minima: this.sorteo.fecha_nacimiento_minima || '',
-          fecha_alta_maxima: this.sorteo.fecha_alta_maxima || '',
+          nombre: this.evento.nombre || '',
+          descripcion: this.evento.descripcion || '',
+          lugar: this.evento.lugar || '',
+          fecha_inicio_inscripcion: this.toDatetimeLocal(this.evento.fecha_inicio_inscripcion),
+          fecha_fin_inscripcion: this.toDatetimeLocal(this.evento.fecha_fin_inscripcion),
+          fecha_celebracion: this.toDatetimeLocal(this.evento.fecha_celebracion),
+          plazas_disponibles: this.evento.plazas_disponibles || 1,
+          fecha_nacimiento_maxima: this.evento.fecha_nacimiento_maxima || '',
+          fecha_nacimiento_minima: this.evento.fecha_nacimiento_minima || '',
+          fecha_alta_maxima: this.evento.fecha_alta_maxima || '',
         }
       } else {
         const hoy = new Date()
@@ -152,8 +145,7 @@
       'form.fecha_fin_inscripcion'(nuevaFecha) {
         if (
           this.form.fecha_celebracion === '' ||
-          this.form.fecha_celebracion === this.form.fecha_fin_inscripcion ||
-          this.form.ultimoFinInscripcion === this.form.fecha_celebracion
+          this.form.fecha_celebracion === this.form.ultimoFinInscripcion
         ) {
           this.form.fecha_celebracion = nuevaFecha
         }
@@ -180,11 +172,8 @@
           this.errorForm = 'La fecha de celebración debe ser posterior al cierre de inscripción.'
           return
         }
-        if (
-          this.form.maximo_inscritos !== null &&
-          this.form.numero_premios > this.form.maximo_inscritos
-        ) {
-          this.errorForm = 'El número de premios no puede superar el máximo de inscritos.'
+        if (this.form.plazas_disponibles < 1) {
+          this.errorForm = 'El número de plazas debe ser mayor que cero.'
           return
         }
 

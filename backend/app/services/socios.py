@@ -4,6 +4,7 @@ from app.models.usuario_socio import UsuarioSocio
 from app.models.usuario import Usuario
 import uuid
 
+
 def get_socios_usuario(usuario: Usuario, session: Session) -> list[Socio]:
     """
     Devuelve la lista de socios a los que el usuario tiene acceso.
@@ -15,14 +16,16 @@ def get_socios_usuario(usuario: Usuario, session: Session) -> list[Socio]:
         select(Socio)
         .join(UsuarioSocio, UsuarioSocio.socio_id == Socio.id)
         .where(
-            UsuarioSocio.usuario_id == usuario.id,
-            UsuarioSocio.fecha_revocacion == None
+            UsuarioSocio.usuario_id == usuario.id, UsuarioSocio.fecha_revocacion == None
         )
         .order_by(asc(Socio.numero_socio))
     )
     return session.exec(statement).all()
 
-def get_socio_usuario(socio_id: str, usuario: Usuario, session: Session) -> Socio | None:
+
+def get_socio_usuario(
+    socio_id: str, usuario: Usuario, session: Session
+) -> Socio | None:
     """
     Devuelve el socio si el usuario tiene acceso a él, None si no.
     """
@@ -36,7 +39,7 @@ def get_socio_usuario(socio_id: str, usuario: Usuario, session: Session) -> Soci
         select(UsuarioSocio).where(
             UsuarioSocio.usuario_id == usuario.id,
             UsuarioSocio.socio_id == socio.id,
-            UsuarioSocio.fecha_revocacion == None
+            UsuarioSocio.fecha_revocacion == None,
         )
     ).first()
     return socio if relacion else None

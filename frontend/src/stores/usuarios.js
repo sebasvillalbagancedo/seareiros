@@ -3,12 +3,10 @@ import { computed, ref } from 'vue'
 import api from '@/services/api'
 
 export const useUsuariosStore = defineStore('usuario', () => {
-  const usuario   = ref(null)
-  const usuarios  = ref([])
+  const usuario = ref(null)
+  const usuarios = ref([])
 
-  const usuariosNormales = computed(() =>
-    usuarios.value.filter(u => u.rol === 'normal')
-  )
+  const usuariosNormales = computed(() => usuarios.value.filter((u) => u.rol === 'normal'))
 
   const idUsuarioActual = computed(() => usuario.value?.id)
 
@@ -27,6 +25,13 @@ export const useUsuariosStore = defineStore('usuario', () => {
     usuarios.value = []
   }
 
-  return { usuario, usuarios, usuariosNormales, idUsuarioActual, 
-      cargarUsuario, cargarUsuarios, limpiar }
+  return {
+    usuario,
+    usuarios,
+    usuariosNormales,
+    idUsuarioActual,
+    cargarUsuario,
+    cargarUsuarios,
+    limpiar,
+  }
 })

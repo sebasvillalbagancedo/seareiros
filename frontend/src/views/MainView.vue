@@ -34,6 +34,7 @@
         <SociosView v-if="moduloActivo === 'socios'" />
         <SorteosView v-else-if="moduloActivo === 'sorteos'" />
         <ChatView v-else-if="moduloActivo === 'chat'" />
+        <EventosView v-else-if="moduloActivo === 'eventos'" />
         <div v-else class="app-placeholder">
           <p>Módulo en desarrollo.</p>
         </div>
@@ -49,6 +50,7 @@
   import SociosView from '@/views/SociosView.vue'
   import SorteosView from '@/views/SorteosView.vue'
   import ChatView from '@/views/ChatView.vue'
+  import EventosView from '@/views/EventosView.vue'
   import { Users, Dices, CalendarDays, MessageCircle } from 'lucide-vue-next'
 
   export default {
@@ -57,6 +59,7 @@
       SociosView,
       SorteosView,
       ChatView,
+      EventosView,
       Users,
       Dices,
       CalendarDays,

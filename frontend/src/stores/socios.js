@@ -3,14 +3,14 @@ import { ref } from 'vue'
 import api from '@/services/api'
 
 export const useSociosStore = defineStore('socios', () => {
-  const socios   = ref([])
-  const permisos = ref([]) 
+  const socios = ref([])
+  const permisos = ref([])
   const cargando = ref(false)
-  const error    = ref(null)
+  const error = ref(null)
 
   async function cargar() {
     cargando.value = true
-    error.value    = null
+    error.value = null
     try {
       const { data } = await api.get('/socios')
       socios.value = data
@@ -29,14 +29,14 @@ export const useSociosStore = defineStore('socios', () => {
 
   async function editar(id, datos) {
     const { data } = await api.put(`/socios/${id}`, datos)
-    const idx = socios.value.findIndex(s => s.id === id)
+    const idx = socios.value.findIndex((s) => s.id === id)
     if (idx !== -1) socios.value[idx] = data
     return data
   }
 
   async function darBaja(id) {
     const { data } = await api.patch(`/socios/${id}`)
-    const idx = socios.value.findIndex(s => s.id === id)
+    const idx = socios.value.findIndex((s) => s.id === id)
     if (idx !== -1) socios.value[idx] = data
     return data
   }
@@ -55,12 +55,23 @@ export const useSociosStore = defineStore('socios', () => {
   }
 
   function limpiar() {
-    socios.value   = []
+    socios.value = []
     permisos.value = []
-    error.value    = null
+    error.value = null
   }
 
-  return { socios, permisos, cargando, error, 
-    cargar, crear, editar, darBaja, cargarPermisos, asignarPermiso, 
-    revocarPermiso, limpiar }
+  return {
+    socios,
+    permisos,
+    cargando,
+    error,
+    cargar,
+    crear,
+    editar,
+    darBaja,
+    cargarPermisos,
+    asignarPermiso,
+    revocarPermiso,
+    limpiar,
+  }
 })

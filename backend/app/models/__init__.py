@@ -9,3 +9,5 @@ from app.models.solicitud_chat import SolicitudChat
 from app.models.invitacion_chat import InvitacionChat
 from app.models.mensaje import Mensaje
 from app.models.mensaje_destinatario import MensajeDestinatario
+from app.models.evento import Evento
+from app.models.inscripcion_evento import InscripcionEvento
