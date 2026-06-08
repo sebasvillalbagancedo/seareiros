@@ -1,5 +1,6 @@
 from sqlmodel import Session, select, func
 from datetime import datetime
+from fastapi import HTTPException, status
 from app.models.evento import Evento
 from app.models.inscripcion_evento import InscripcionEvento
 from app.models.socio import Socio
@@ -52,11 +53,34 @@ def _socio_ids_de_usuario(session: Session, usuario_id: uuid.UUID) -> list[uuid.
     return session.exec(
         select(UsuarioSocio.socio_id).where(
             UsuarioSocio.usuario_id == usuario_id,
-            UsuarioSocio.fecha_revocacion == None,  # noqa: E711
+            UsuarioSocio.fecha_revocacion == None,
         )
     ).all()
 
-
+def _verificar_permiso_sobre_socio(
+    usuario: Usuario, socio: Socio, session: Session
+) -> None:
+    """
+    Verifica que el usuario tiene permiso sobre el socio.
+    Los administradores tienen acceso a cualquier socio.
+    Los usuarios normales solo pueden operar con sus socios asignados.
+    Lanza HTTPException 403 si no tiene permiso.
+    """
+    if usuario.rol == "administrador":
+        return
+    permiso = session.exec(
+        select(UsuarioSocio).where(
+            UsuarioSocio.usuario_id == usuario.id,
+            UsuarioSocio.socio_id == socio.id,
+            UsuarioSocio.fecha_revocacion == None,  # noqa: E711
+        )
+    ).first()
+    if not permiso:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso sobre este socio",
+        )
+    
 # ── Eventos ───────────────────────────────────────────────────────
 
 
@@ -73,7 +97,6 @@ def contar_inscritos(evento_id: uuid.UUID, session: Session) -> int:
 def get_eventos(session: Session) -> list[Evento]:
     """
     Devuelve los eventos cuya fecha de celebración es posterior a hoy (disponibles).
-    Todos los usuarios autenticados ven el listado completo.
     """
     ahora = datetime.now()
     stmt = select(Evento).where(Evento.fecha_celebracion > ahora)
@@ -124,6 +147,11 @@ def get_evento(evento_id: str, session: Session) -> Evento | None:
 
 def crear_evento(datos: EventoCreate, usuario: Usuario, session: Session) -> Evento:
     """Crea un nuevo evento."""
+    if usuario.rol != "administrador":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el administrador puede crear eventos",
+        )
     evento = Evento(**datos.model_dump(), usuario_creacion=usuario.id)
     session.add(evento)
     session.commit()
@@ -131,8 +159,18 @@ def crear_evento(datos: EventoCreate, usuario: Usuario, session: Session) -> Eve
     return evento
 
 
-def editar_evento(evento: Evento, datos: EventoUpdate, session: Session) -> Evento:
+def editar_evento(evento: Evento, datos: EventoUpdate, usuario: Usuario, session: Session) -> Evento:
     """Edita los datos de un evento existente. Solo en estado abierto."""
+    if usuario.rol != "administrador":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el administrador puede editar eventos",
+        )
+    if evento.estado != "abierto":
+        raise HTTPException(
+            status_code=400,
+            detail="Solo se pueden editar eventos en estado abierto",
+        )
     for campo, valor in datos.model_dump(exclude_unset=True).items():
         setattr(evento, campo, valor)
     session.add(evento)
@@ -144,7 +182,19 @@ def editar_evento(evento: Evento, datos: EventoUpdate, session: Session) -> Even
 def cancelar_evento(
     evento: Evento, motivo: str, usuario: Usuario, session: Session
 ) -> Evento:
-    """Cancela un evento."""
+    """
+    Cancela un evento.
+    Solo el administrador puede cancelar y solo si no está ya cancelado o celebrado.
+    """
+    if usuario.rol != "administrador":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el administrador puede cancelar eventos",
+        )
+    if evento.estado == "cancelado":
+        raise HTTPException(status_code=400, detail="El evento ya está cancelado")
+    if evento.estado == "celebrado":
+        raise HTTPException(status_code=400, detail="El evento ya está celebrado")
     evento.estado = "cancelado"
     evento.motivo_cancelacion = motivo
     evento.fecha_cancelacion = datetime.now()
@@ -189,9 +239,14 @@ def inscribir_socio(
 ) -> tuple[InscripcionEvento | None, str]:
     """
     Inscribe a un socio en un evento.
-    Devuelve (inscripcion, '') si OK, (None, motivo) si no se puede inscribir.
+    Verifica permisos del usuario sobre el socio, estado del evento,
+    plazas disponibles, duplicados y requisitos de participación.
+    Devuelve (inscripcion, '') si OK, (None, motivo) si no es posible.
     """
-    # Verificar que el sorteo está abierto
+    # Verificar permisos del usuario sobre el socio
+    _verificar_permiso_sobre_socio(usuario, socio, session)
+
+    # Verificar que el evento está abierto
     if evento.estado != "abierto":
         return None, "El evento no está en estado abierto"
 
@@ -251,10 +306,19 @@ def gestionar_inscripcion(
 ) -> InscripcionEvento:
     """
     El administrador confirma, rechaza o cancela una inscripción.
-    Si se rechaza o cancela y el evento estaba completo, vuelve a abierto.
+    Verifica permisos, estado actual de la inscripción y actualiza el evento si procede.
     """
+    if usuario.rol != "administrador":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el administrador puede gestionar inscripciones",
+        )
+    if inscripcion.estado in ("rechazada", "cancelada"):
+        raise HTTPException(
+            status_code=400,
+            detail="La inscripción ya está finalizada y no puede modificarse",
+        )
     evento = session.get(Evento, inscripcion.evento_id)
-
     inscripcion.estado = nuevo_estado
     inscripcion.usuario_gestion = usuario.id
     inscripcion.fecha_gestion = datetime.now()

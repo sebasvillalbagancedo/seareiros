@@ -1,9 +1,11 @@
 from sqlmodel import Session, select, func
 from datetime import datetime
+from fastapi import HTTPException, status
 from app.models.sorteo import Sorteo
 from app.models.inscripcion_sorteo import InscripcionSorteo
 from app.models.socio import Socio
 from app.models.usuario import Usuario
+from app.models.usuario_socio import UsuarioSocio
 from app.schemas.sorteo import SorteoCreate, SorteoUpdate
 import uuid
 import random
@@ -46,6 +48,72 @@ def _validar_requisitos_socio(socio: Socio, sorteo: Sorteo) -> tuple[bool, str]:
 
     return True, ""
 
+def _verificar_permiso_sobre_socio(
+    usuario: Usuario, socio: Socio, session: Session
+) -> None:
+    """
+    Verifica que el usuario tiene permiso sobre el socio.
+    Los administradores tienen acceso a cualquier socio.
+    Los usuarios normales solo pueden operar con sus socios asignados.
+    Lanza HTTPException 403 si no tiene permiso.
+    """
+    if usuario.rol == "administrador":
+        return
+    permiso = session.exec(
+        select(UsuarioSocio).where(
+            UsuarioSocio.usuario_id == usuario.id,
+            UsuarioSocio.socio_id == socio.id,
+            UsuarioSocio.fecha_revocacion == None
+        )
+    ).first()
+    if not permiso:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso sobre este socio",
+        )
+
+def _resolver_sorteo(
+    sorteo: Sorteo, session: Session
+) -> tuple[Sorteo, list[InscripcionSorteo]]:
+    """
+    Lógica pura de resolución de un sorteo, sin comprobación de autorización.
+    Usada tanto por el endpoint (previa comprobación de rol) como por el planificador.
+    Si no hay inscritos, cancela el sorteo directamente en base de datos.
+    Devuelve (sorteo_actualizado, lista_de_ganadores).
+    """
+    inscripciones = session.exec(
+        select(InscripcionSorteo).where(
+            InscripcionSorteo.sorteo_id == sorteo.id,
+            InscripcionSorteo.estado == "activa",
+        )
+    ).all()
+
+    if not inscripciones:
+        sorteo.estado = "cancelado"
+        sorteo.motivo_cancelacion = (
+            "No hay socios inscritos en el momento de la resolución"
+        )
+        session.add(sorteo)
+        session.commit()
+        session.refresh(sorteo)
+        return sorteo, []
+
+    num_ganadores = min(sorteo.numero_premios, len(inscripciones))
+    ganadores = random.sample(list(inscripciones), num_ganadores)
+
+    for inscripcion in ganadores:
+        inscripcion.es_ganador = True
+        session.add(inscripcion)
+
+    sorteo.estado = "resuelto"
+    session.add(sorteo)
+    session.commit()
+
+    for inscripcion in ganadores:
+        session.refresh(inscripcion)
+    session.refresh(sorteo)
+
+    return sorteo, ganadores
 
 # ── Sorteos ───────────────────────────────────────────────────────
 
@@ -88,7 +156,12 @@ def get_sorteo(sorteo_id: str, session: Session) -> Sorteo | None:
 
 
 def crear_sorteo(datos: SorteoCreate, usuario: Usuario, session: Session) -> Sorteo:
-    """Crea un nuevo sorteo."""
+    """Crea un nuevo sorteo. Solo el administrador puede invocar esta función."""
+    if usuario.rol != "administrador":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el administrador puede crear sorteos",
+        )
     sorteo = Sorteo(**datos.model_dump(), usuario_creacion=usuario.id)
     session.add(sorteo)
     session.commit()
@@ -96,8 +169,21 @@ def crear_sorteo(datos: SorteoCreate, usuario: Usuario, session: Session) -> Sor
     return sorteo
 
 
-def editar_sorteo(sorteo: Sorteo, datos: SorteoUpdate, session: Session) -> Sorteo:
-    """Edita los datos de un sorteo existente. Solo en estado abierto."""
+def editar_sorteo(sorteo: Sorteo, datos: SorteoUpdate, usuario: Usuario, session: Session) -> Sorteo:
+    """
+    Edita los datos de un sorteo existente.
+    Solo el administrador puede editar y solo en estado abierto.
+    """
+    if usuario.rol != "administrador":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el administrador puede editar sorteos",
+        )
+    if sorteo.estado != "abierto":
+        raise HTTPException(
+            status_code=400,
+            detail="Solo se pueden editar sorteos en estado abierto",
+        )
     for campo, valor in datos.model_dump(exclude_unset=True).items():
         setattr(sorteo, campo, valor)
     session.add(sorteo)
@@ -106,8 +192,21 @@ def editar_sorteo(sorteo: Sorteo, datos: SorteoUpdate, session: Session) -> Sort
     return sorteo
 
 
-def cancelar_sorteo(sorteo: Sorteo, motivo: str, session: Session) -> Sorteo:
-    """Cancela un sorteo e informa el motivo."""
+def cancelar_sorteo(sorteo: Sorteo, motivo: str, usuario: Usuario, session: Session) -> Sorteo:
+    """
+    Cancela un sorteo.
+    Solo el administrador puede cancelar y solo si no está ya resuelto o cancelado.
+    """
+    if usuario.rol != "administrador":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el administrador puede cancelar sorteos",
+        )
+    if sorteo.estado in ("resuelto", "cancelado"):
+        raise HTTPException(
+            status_code=400,
+            detail="No se puede cancelar un sorteo ya resuelto o cancelado",
+        )
     sorteo.estado = "cancelado"
     sorteo.motivo_cancelacion = motivo
     session.add(sorteo)
@@ -128,9 +227,7 @@ def get_inscripciones(
     statement = (
         select(InscripcionSorteo, Socio)
         .join(Socio, Socio.id == InscripcionSorteo.socio_id)
-        .where(
-            InscripcionSorteo.sorteo_id == uuid.UUID(sorteo_id)            
-        )
+        .where(InscripcionSorteo.sorteo_id == uuid.UUID(sorteo_id))
         .order_by(Socio.apellidos, Socio.nombre)
     )
     return session.exec(statement).all()
@@ -143,6 +240,9 @@ def inscribir_socio(
     Inscribe a un socio en un sorteo.
     Devuelve (inscripcion, '') si OK, (None, motivo) si no se puede inscribir.
     """
+    # Verificar permiso del usuario sobre el socio
+    _verificar_permiso_sobre_socio(usuario, socio, session)
+    
     # Verificar que el sorteo está abierto
     if sorteo.estado != "abierto":
         return None, "El sorteo no está en estado abierto"
@@ -193,7 +293,23 @@ def inscribir_socio(
 def cancelar_inscripcion(
     inscripcion: InscripcionSorteo, usuario: Usuario, session: Session
 ) -> InscripcionSorteo:
-    """Cancela la inscripción de un socio en un sorteo."""
+    """
+    Cancela la inscripción de un socio en un sorteo.
+    Verifica que el sorteo esté abierto, que la inscripción esté activa
+    y que el usuario tenga permiso sobre el socio.
+    """
+    sorteo = session.get(Sorteo, inscripcion.sorteo_id)
+    if not sorteo or sorteo.estado not in ("abierto",):
+        raise HTTPException(
+            status_code=400,
+            detail="Solo se pueden cancelar inscripciones en sorteos abiertos",
+        )
+    if inscripcion.estado != "activa":
+        raise HTTPException(status_code=400, detail="La inscripción no está activa")
+
+    socio = session.get(Socio, inscripcion.socio_id)
+    _verificar_permiso_sobre_socio(usuario, socio, session)
+
     inscripcion.estado = "cancelada"
     inscripcion.fecha_cancelacion = datetime.now()
     inscripcion.usuario_cancelacion = usuario.id
@@ -207,44 +323,33 @@ def cancelar_inscripcion(
 
 
 def resolver_sorteo(
-    sorteo: Sorteo, session: Session
+    sorteo: Sorteo, usuario: Usuario, session: Session
 ) -> tuple[Sorteo, list[InscripcionSorteo]]:
     """
     Resuelve el sorteo seleccionando ganadores aleatoriamente.
+    Solo el administrador puede resolver manualmente.
+    Verifica que el sorteo esté en un estado que permita resolución.
     Si no hay inscritos, cancela el sorteo.
     Devuelve (sorteo_actualizado, lista_de_ganadores).
     """
-    # Obtener inscripciones activas
-    inscripciones = session.exec(
-        select(InscripcionSorteo).where(
-            InscripcionSorteo.sorteo_id == sorteo.id,
-            InscripcionSorteo.estado == "activa",
+    if usuario.rol != "administrador":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el administrador puede resolver sorteos",
         )
-    ).all()
-
-    # Sin inscritos: cancelar el sorteo
-    if not inscripciones:
-        sorteo = cancelar_sorteo(
-            sorteo, "No hay socios inscritos en el momento de la resolución", session
+    if sorteo.estado not in ("abierto", "cerrado", "pendiente"):
+        raise HTTPException(
+            status_code=400,
+            detail="El sorteo no está en un estado que permita su resolución",
         )
-        return sorteo, []
 
-    # Seleccionar ganadores aleatoriamente
-    num_ganadores = min(sorteo.numero_premios, len(inscripciones))
-    ganadores = random.sample(list(inscripciones), num_ganadores)
+    return _resolver_sorteo(sorteo, session)
 
-    # Marcar ganadores
-    for inscripcion in ganadores:
-        inscripcion.es_ganador = True
-        session.add(inscripcion)
 
-    # Actualizar estado del sorteo
-    sorteo.estado = "resuelto"
-    session.add(sorteo)
-    session.commit()
-
-    for inscripcion in ganadores:
-        session.refresh(inscripcion)
-    session.refresh(sorteo)
-
-    return sorteo, ganadores
+def resolver_sorteo_automatico(
+    sorteo: Sorteo, session: Session
+) -> tuple[Sorteo, list[InscripcionSorteo]]:
+    """
+    Resuelve el sorteo desde el planificador automático, sin usuario asociado.
+    """
+    return _resolver_sorteo(sorteo, session)

@@ -12,7 +12,7 @@ from sqlmodel import Session, select
 from app.database import engine
 from app.models.sorteo import Sorteo
 from app.models.evento import Evento
-from app.services.sorteos import resolver_sorteo
+from app.services.sorteos import resolver_sorteo_automatico
 from app.services.eventos import celebrar_evento
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ def resolver_sorteos_pendientes():
 
         for sorteo in sorteos:
             try:
-                sorteo_actualizado, ganadores = resolver_sorteo(sorteo, session)
+                sorteo_actualizado, ganadores = resolver_sorteo_automatico(sorteo, session)
                 if ganadores:
                     logger.info(
                         f"Sorteo '{sorteo.nombre}' resuelto — "

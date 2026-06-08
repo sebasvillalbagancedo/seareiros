@@ -8,7 +8,7 @@ from app.services.auth import autenticar_usuario, create_token
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
 
-@router.post("/login", response_model=TokenOutput)
+@router.post("/login", response_model=TokenOutput, summary="Login")
 def login_ep(datos: LoginInput, session: Session = Depends(get_session)):
     """Inicia sesión y devuelve un token JWT."""
     usuario = autenticar_usuario(datos.identificador, datos.contrasena, session)
@@ -29,7 +29,7 @@ def login_ep(datos: LoginInput, session: Session = Depends(get_session)):
     return TokenOutput(access_token=token)
 
 
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT, summary="Logout")
 def logout_ep():
     """
     Cierre de sesión.

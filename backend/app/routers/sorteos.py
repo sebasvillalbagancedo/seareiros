@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
+from sqlmodel import Session
 from app.database import get_session
 from app.models.sorteo import Sorteo
 from app.models.inscripcion_sorteo import InscripcionSorteo
 from app.models.socio import Socio
 from app.models.usuario import Usuario
-from app.models.usuario_socio import UsuarioSocio
 from app.schemas.sorteo import (
     SorteoCreate,
     SorteoUpdate,
@@ -119,11 +118,6 @@ def post_sorteo_ep(
     session: Session = Depends(get_session),
 ):
     """Crear Sorteo — Solo administrador."""
-    if usuario.rol != "administrador":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo el administrador puede crear sorteos",
-        )
     sorteo = crear_sorteo(datos, usuario, session)
     return _sorteo_to_output(sorteo, session)
 
@@ -131,7 +125,6 @@ def post_sorteo_ep(
 @router.get("/{sorteo_id}", response_model=SorteoOutput, summary="Obtener Sorteo")
 def get_sorteo_by_id_ep(
     sorteo_id: str,
-    usuario: Usuario = Depends(get_usuario_actual),
     session: Session = Depends(get_session),
 ):
     """Obtiene el detalle de un sorteo concreto."""
@@ -149,19 +142,10 @@ def put_sorteo_ep(
     session: Session = Depends(get_session),
 ):
     """Editar un sorteo en estado abierto. Solo administrador."""
-    if usuario.rol != "administrador":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo el administrador puede editar sorteos",
-        )
     sorteo = get_sorteo(sorteo_id, session)
     if not sorteo:
         raise HTTPException(status_code=404, detail="Sorteo no encontrado")
-    if sorteo.estado != "abierto":
-        raise HTTPException(
-            status_code=400, detail="Solo se pueden editar sorteos en estado abierto"
-        )
-    sorteo = editar_sorteo(sorteo, datos, session)
+    sorteo = editar_sorteo(sorteo, datos, usuario, session)
     return _sorteo_to_output(sorteo, session)
 
 
@@ -175,20 +159,10 @@ def patch_sorteo_cancelar_ep(
     session: Session = Depends(get_session),
 ):
     """Cancelar un sorteo — Solo administrador."""
-    if usuario.rol != "administrador":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo el administrador puede cancelar sorteos",
-        )
     sorteo = get_sorteo(sorteo_id, session)
     if not sorteo:
         raise HTTPException(status_code=404, detail="Sorteo no encontrado")
-    if sorteo.estado in ("resuelto", "cancelado"):
-        raise HTTPException(
-            status_code=400,
-            detail="No se puede cancelar un sorteo ya resuelto o cancelado",
-        )
-    sorteo = cancelar_sorteo(sorteo, datos.motivo_cancelacion, session)
+    sorteo = cancelar_sorteo(sorteo, datos.motivo_cancelacion, usuario, session)
     return _sorteo_to_output(sorteo, session)
 
 
@@ -205,20 +179,10 @@ def patch_sorteo_resolver_ep(
     En producción lo ejecutará el planificador automático,
     pero se expone como endpoint para permitir la resolución manual por el administrador.
     """
-    if usuario.rol != "administrador":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo el administrador puede resolver sorteos",
-        )
     sorteo = get_sorteo(sorteo_id, session)
     if not sorteo:
         raise HTTPException(status_code=404, detail="Sorteo no encontrado")
-    if sorteo.estado not in ("abierto", "cerrado", "pendiente"):
-        raise HTTPException(
-            status_code=400,
-            detail="El sorteo no está en un estado que permita su resolución",
-        )
-    sorteo, _ = resolver_sorteo(sorteo, session)
+    sorteo, _ = resolver_sorteo(sorteo, usuario, session)
     return _sorteo_to_output(sorteo, session)
 
 
@@ -232,7 +196,6 @@ def patch_sorteo_resolver_ep(
 )
 def get_inscripciones_sorteo_ep(
     sorteo_id: str,
-    usuario: Usuario = Depends(get_usuario_actual),
     session: Session = Depends(get_session),
 ):
     """Listar Inscripciones Sorteo."""
@@ -268,21 +231,6 @@ def post_inscripcion_ep(
     if not socio:
         raise HTTPException(status_code=404, detail="Socio no encontrado")
 
-    # Usuario normal: verificar que tiene permiso sobre el socio
-    if usuario.rol != "administrador":
-        permiso = session.exec(
-            select(UsuarioSocio).where(
-                UsuarioSocio.usuario_id == usuario.id,
-                UsuarioSocio.socio_id == socio.id,
-                UsuarioSocio.fecha_revocacion == None,
-            )
-        ).first()
-        if not permiso:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No tienes permiso sobre este socio",
-            )
-
     inscripcion, motivo = inscribir_socio(sorteo, socio, usuario, session)
     if not inscripcion:
         raise HTTPException(status_code=400, detail=motivo)
@@ -305,33 +253,11 @@ def patch_inscripcion_ep(
     sorteo = get_sorteo(sorteo_id, session)
     if not sorteo:
         raise HTTPException(status_code=404, detail="Sorteo no encontrado")
-    if sorteo.estado not in ("abierto",):
-        raise HTTPException(
-            status_code=400,
-            detail="Solo se pueden cancelar inscripciones en sorteos abiertos",
-        )
-
+    
     inscripcion = session.get(InscripcionSorteo, uuid.UUID(inscripcion_id))
     if not inscripcion or str(inscripcion.sorteo_id) != sorteo_id:
         raise HTTPException(status_code=404, detail="Inscripción no encontrada")
-    if inscripcion.estado != "activa":
-        raise HTTPException(status_code=400, detail="La inscripción no está activa")
-
-    # Usuario normal: solo puede cancelar inscripciones de sus socios
-    if usuario.rol != "administrador":
-        permiso = session.exec(
-            select(UsuarioSocio).where(
-                UsuarioSocio.usuario_id == usuario.id,
-                UsuarioSocio.socio_id == inscripcion.socio_id,
-                UsuarioSocio.fecha_revocacion == None,
-            )
-        ).first()
-        if not permiso:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No tienes permiso sobre este socio",
-            )
-
+    
     inscripcion = cancelar_inscripcion(inscripcion, usuario, session)
     socio = session.get(Socio, inscripcion.socio_id)
     return _inscripcion_to_output(inscripcion, socio)

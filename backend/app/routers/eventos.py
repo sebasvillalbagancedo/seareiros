@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
+from sqlmodel import Session
 from app.database import get_session
 from app.models.evento import Evento
 from app.models.inscripcion_evento import InscripcionEvento
 from app.models.socio import Socio
 from app.models.usuario import Usuario
-from app.models.usuario_socio import UsuarioSocio
 from app.schemas.evento import (
     EventoCreate,
     EventoUpdate,
@@ -23,7 +22,6 @@ from app.services.eventos import (
     crear_evento,
     editar_evento,
     cancelar_evento,
-    celebrar_evento,
     get_inscripciones,
     inscribir_socio,
     gestionar_inscripcion,
@@ -82,7 +80,7 @@ def _inscripcion_to_output(
     )
 
 
-# ── Endpoints de sorteos ──────────────────────────────────────────
+# ── Endpoints de eventos ──────────────────────────────────────────
 
 
 @router.get("", response_model=list[EventoOutput], summary="Listar Eventos Disponibles")
@@ -122,11 +120,6 @@ def post_evento_ep(
     session: Session = Depends(get_session),
 ):
     """Crear Evento — Solo administrador."""
-    if usuario.rol != "administrador":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo el administrador puede crear eventos",
-        )
     evento = crear_evento(datos, usuario, session)
     return _evento_to_output(evento, session)
 
@@ -148,19 +141,10 @@ def put_evento_ep(
     session: Session = Depends(get_session),
 ):
     """Editar un evento en estado abierto. Solo administrador."""
-    if usuario.rol != "administrador":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo el administrador puede editar eventos",
-        )
     evento = get_evento(evento_id, session)
     if not evento:
         raise HTTPException(status_code=404, detail="Evento no encontrado")
-    if evento.estado != "abierto":
-        raise HTTPException(
-            status_code=400, detail="Solo se pueden editar eventos en estado abierto"
-        )
-    evento = editar_evento(evento, datos, session)
+    evento = editar_evento(evento, datos, usuario, session)
     return _evento_to_output(evento, session)
 
 
@@ -174,18 +158,9 @@ def patch_evento_cancelar_ep(
     session: Session = Depends(get_session),
 ):
     """Cancelar un evento — Solo administrador."""
-    if usuario.rol != "administrador":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo el administrador puede cancelar eventos",
-        )
     evento = get_evento(evento_id, session)
     if not evento:
         raise HTTPException(status_code=404, detail="Evento no encontrado")
-    if evento.estado == "cancelado":
-        raise HTTPException(status_code=400, detail="El evento ya está cancelado")
-    if evento.estado == "celebrado":
-        raise HTTPException(status_code=400, detail="El evento ya está celebrado")
     evento = cancelar_evento(evento, datos.motivo_cancelacion, usuario, session)
     return _evento_to_output(evento, session)
 
@@ -223,8 +198,6 @@ def post_inscripcion_ep(
 ):
     """
     Inscribe a un socio en un evento.
-    El administrador puede inscribir cualquier socio activo.
-    El usuario normal solo puede inscribir socios que tenga asignados.
     """
     evento = get_evento(evento_id, session)
     if not evento:
@@ -233,21 +206,6 @@ def post_inscripcion_ep(
     socio = session.get(Socio, uuid.UUID(datos.socio_id))
     if not socio:
         raise HTTPException(status_code=404, detail="Socio no encontrado")
-
-    if usuario.rol != "administrador":
-        permiso = session.exec(
-            select(UsuarioSocio).where(
-                UsuarioSocio.usuario_id == usuario.id,
-                UsuarioSocio.socio_id == socio.id,
-                UsuarioSocio.fecha_revocacion == None,
-            )
-        ).first()
-        if not permiso:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No tienes permiso sobre este socio",
-            )
-
     inscripcion, motivo = inscribir_socio(evento, socio, usuario, session)
     if not inscripcion:
         raise HTTPException(status_code=400, detail=motivo)
@@ -268,25 +226,14 @@ def patch_inscripcion_ep(
     session: Session = Depends(get_session),
 ):
     """Confirmar, rechazar o cancelar una inscripción — Solo administrador."""
-    if usuario.rol != "administrador":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo el administrador puede gestionar inscripciones",
-        )
-
     evento = get_evento(evento_id, session)
     if not evento:
         raise HTTPException(status_code=404, detail="Evento no encontrado")
 
     inscripcion = session.get(InscripcionEvento, uuid.UUID(inscripcion_id))
+
     if not inscripcion or str(inscripcion.evento_id) != evento_id:
         raise HTTPException(status_code=404, detail="Inscripción no encontrada")
-
-    if inscripcion.estado in ("rechazada", "cancelada"):
-        raise HTTPException(
-            status_code=400,
-            detail="La inscripción ya está finalizada y no puede modificarse",
-        )
 
     inscripcion = gestionar_inscripcion(inscripcion, datos.estado, usuario, session)
     socio = session.get(Socio, inscripcion.socio_id)
