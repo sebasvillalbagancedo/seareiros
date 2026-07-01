@@ -93,6 +93,7 @@ def _resolver_sorteo(
         sorteo.motivo_cancelacion = (
             "No hay socios inscritos en el momento de la resolución"
         )
+        sorteo.fecha_cancelacion = datetime.now()
         session.add(sorteo)
         session.commit()
         session.refresh(sorteo)
@@ -209,6 +210,8 @@ def cancelar_sorteo(sorteo: Sorteo, motivo: str, usuario: Usuario, session: Sess
         )
     sorteo.estado = "cancelado"
     sorteo.motivo_cancelacion = motivo
+    sorteo.fecha_cancelacion = datetime.now()
+    sorteo.usuario_cancelacion = usuario.id
     session.add(sorteo)
     session.commit()
     session.refresh(sorteo)
