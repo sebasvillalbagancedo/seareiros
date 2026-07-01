@@ -1,8 +1,10 @@
 """
 Planificador de tareas automáticas — Seareiros
-Gestiona dos tareas periódicas relacionadas con el ciclo de vida de los sorteos:
-  1. Cerrar inscripciones de sorteos cuyo plazo ha vencido (abierto → pendiente)
-  2. Resolver sorteos cuya fecha de celebración ha llegado (pendiente → resuelto/cancelado)
+Gestiona el ciclo de vida automático de sorteos y eventos:
+  - Sorteos: encadena en una única tarea el cierre de inscripciones vencidas
+    (abierto → pendiente) y la resolución de sorteos cuya fecha de celebración
+    ya ha llegado (pendiente → resuelto/cancelado)
+  - Eventos: marca como celebrados los eventos cuya fecha de celebración ya ha llegado
 """
 
 import logging
@@ -23,50 +25,46 @@ scheduler = BackgroundScheduler()
 # ── Tareas de sorteos ─────────────────────────────────────────────
 
 
-def cerrar_inscripciones():
+def procesar_sorteos():
     """
-    Tarea 1 — Se ejecuta cada minuto.
-    Busca sorteos en estado 'abierto' cuya fecha_fin_inscripcion ya ha pasado
-    y los pasa a estado 'pendiente', indicando que están listos para resolverse.
+    Tarea única — Se ejecuta cada minuto.
+    Encadena, en la misma ejecución y la misma sesión de BD, los dos pasos
+    del ciclo de vida del sorteo:
+      1. abierto → pendiente  (cuando fecha_fin_inscripcion ya ha pasado)
+      2. pendiente → resuelto/cancelado (cuando fecha_celebracion ya ha llegado)
+
+    Encadenar ambos pasos en un único job evita que un sorteo cuya
+    fecha_fin_inscripcion coincide con su fecha_celebracion (o la fecha_celebracion
+    es anterior/igual al momento de cierre) tenga que esperar al siguiente
+    ciclo del planificador para resolverse.
     """
     ahora = datetime.now()
     with Session(engine) as session:
-        sorteos = session.exec(
+        # Paso 1: cerrar inscripciones vencidas
+        sorteos_a_cerrar = session.exec(
             select(Sorteo).where(
                 Sorteo.estado == "abierto", Sorteo.fecha_fin_inscripcion <= ahora
             )
         ).all()
 
-        if not sorteos:
-            return
-
-        for sorteo in sorteos:
+        for sorteo in sorteos_a_cerrar:
             sorteo.estado = "pendiente"
             session.add(sorteo)
             logger.info(f"Sorteo '{sorteo.nombre}' ({sorteo.id}) → pendiente")
 
-        session.commit()
+        if sorteos_a_cerrar:
+            session.commit()
+            for sorteo in sorteos_a_cerrar:
+                session.refresh(sorteo)
 
-
-def resolver_sorteos_pendientes():
-    """
-    Tarea 2 — Se ejecuta cada minuto.
-    Busca sorteos en estado 'pendiente' cuya fecha_celebracion ya ha llegado
-    y los resuelve automáticamente seleccionando ganadores al azar.
-    Si no hay inscritos activos, el sorteo pasa a cancelado.
-    """
-    ahora = datetime.now()
-    with Session(engine) as session:
-        sorteos = session.exec(
+        # Paso 2: resolver pendientes cuya fecha de celebración ya ha llegado
+        sorteos_a_resolver = session.exec(
             select(Sorteo).where(
                 Sorteo.estado == "pendiente", Sorteo.fecha_celebracion <= ahora
             )
         ).all()
 
-        if not sorteos:
-            return
-
-        for sorteo in sorteos:
+        for sorteo in sorteos_a_resolver:
             try:
                 sorteo_actualizado, ganadores = resolver_sorteo_automatico(sorteo, session)
                 if ganadores:
@@ -125,17 +123,10 @@ def iniciar_scheduler():
     """
     # Ejecutar cada minuto
     scheduler.add_job(
-        cerrar_inscripciones,
+        procesar_sorteos,
         trigger="interval",
         minutes=1,
-        id="cerrar_inscripciones",
-        replace_existing=True,
-    )
-    scheduler.add_job(
-        resolver_sorteos_pendientes,
-        trigger="interval",
-        minutes=1,
-        id="resolver_sorteos_pendientes",
+        id="procesar_sorteos",
         replace_existing=True,
     )
     scheduler.add_job(
