@@ -110,7 +110,7 @@ def get_historico_eventos(session: Session) -> list[Evento]:
     Solo para administradores.
     """
     ahora = datetime.now()
-    stmt = select(Evento).where(Evento.fecha_celebracion <= ahora)
+    stmt = select(Evento).where(Evento.fecha_celebracion <= ahora, Evento.estado != "abierto")
     stmt = stmt.order_by(Evento.fecha_celebracion.desc())
     return session.exec(stmt).all()
 
@@ -132,7 +132,9 @@ def get_historico_eventos_usuario(
         select(Evento)
         .join(InscripcionEvento, InscripcionEvento.evento_id == Evento.id)
         .where(
-            Evento.fecha_celebracion <= ahora, InscripcionEvento.socio_id.in_(socio_ids)
+            Evento.fecha_celebracion <= ahora, 
+            Evento.estado != "abierto",
+            InscripcionEvento.socio_id.in_(socio_ids)
         )
         .distinct()
         .order_by(Evento.fecha_celebracion.desc())

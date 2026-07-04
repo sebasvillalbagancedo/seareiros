@@ -146,7 +146,7 @@ def get_historico_sorteos(session: Session) -> list[Sorteo]:
     Todos los usuarios autenticados ven el histórico completo.
     """
     ahora = datetime.now()
-    stmt = select(Sorteo).where(Sorteo.fecha_celebracion <= ahora)
+    stmt = select(Sorteo).where(Sorteo.fecha_celebracion <= ahora, Sorteo.estado != "abierto")
     stmt = stmt.order_by(Sorteo.fecha_celebracion.desc())
     return session.exec(stmt).all()
 
